@@ -1,0 +1,115 @@
+{
+	"frames": {
+		"00": {
+			"frame": {
+				"x": 335,
+				"y": 3,
+				"w": 154,
+				"h": 234
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 154,
+				"h": 234
+			},
+			"sourceSize": {
+				"w": 154,
+				"h": 234
+			}
+		},
+		"AC": {
+			"frame": {
+				"x": 169,
+				"y": 262,
+				"w": 154,
+				"h": 234
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 154,
+				"h": 234
+			},
+			"sourceSize": {
+				"w": 154,
+				"h": 234
+			}
+		},
+		"AD": {
+			"frame": {
+				"x": 1,
+				"y": 1,
+				"w": 154,
+				"h": 234
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 154,
+				"h": 234
+			},
+			"sourceSize": {
+				"w": 154,
+				"h": 234
+			}
+		},
+		"AH": {
+			"frame": {
+				"x": 2,
+				"y": 261,
+				"w": 154,
+				"h": 234
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 154,
+				"h": 234
+			},
+			"sourceSize": {
+				"w": 154,
+				"h": 234
+			}
+		},
+		"AS": {
+			"frame": {
+				"x": 168,
+				"y": 2,
+				"w": 154,
+				"h": 234
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 154,
+				"h": 234
+			},
+			"sourceSize": {
+				"w": 154,
+				"h": 234
+			}
+		}
+	},
+	"meta": {
+		"app": "HANDBUILT",
+		"version": "0.0",
+		"image": "unlockable.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 490,
+			"h": 497
+		},
+		"scale": "1"
+	}
+}

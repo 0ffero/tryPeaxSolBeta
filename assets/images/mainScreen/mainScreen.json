@@ -1,0 +1,175 @@
+{
+	"frames": {
+		"background": {
+			"frame": {
+				"x": 1,
+				"y": 1,
+				"w": 1920,
+				"h": 1080
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 1920,
+				"h": 1080
+			},
+			"sourceSize": {
+				"w": 1920,
+				"h": 1080
+			}
+		},
+		"buttonBG": {
+			"frame": {
+				"x": 1,
+				"y": 1083,
+				"w": 464,
+				"h": 133
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 464,
+				"h": 133
+			},
+			"sourceSize": {
+				"w": 464,
+				"h": 133
+			}
+		},
+		"buyText": {
+			"frame": {
+				"x": 467,
+				"y": 1083,
+				"w": 139,
+				"h": 50
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 139,
+				"h": 50
+			},
+			"sourceSize": {
+				"w": 139,
+				"h": 50
+			}
+		},
+		"hiScoresText": {
+			"frame": {
+				"x": 608,
+				"y": 1083,
+				"w": 359,
+				"h": 50
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 359,
+				"h": 50
+			},
+			"sourceSize": {
+				"w": 359,
+				"h": 50
+			}
+		},
+		"newGameText": {
+			"frame": {
+				"x": 969,
+				"y": 1083,
+				"w": 388,
+				"h": 50
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 388,
+				"h": 50
+			},
+			"sourceSize": {
+				"w": 388,
+				"h": 50
+			}
+		},
+		"optionsText": {
+			"frame": {
+				"x": 1359,
+				"y": 1083,
+				"w": 293,
+				"h": 50
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 293,
+				"h": 50
+			},
+			"sourceSize": {
+				"w": 293,
+				"h": 50
+			}
+		},
+		"rightSide": {
+			"frame": {
+				"x": 1923,
+				"y": 1,
+				"w": 511,
+				"h": 970
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 511,
+				"h": 970
+			},
+			"sourceSize": {
+				"w": 511,
+				"h": 970
+			}
+		},
+		"welcomeText": {
+			"frame": {
+				"x": 1654,
+				"y": 1083,
+				"w": 553,
+				"h": 533
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 553,
+				"h": 533
+			},
+			"sourceSize": {
+				"w": 553,
+				"h": 533
+			}
+		}
+	},
+	"meta": {
+		"app": "http://www.codeandweb.com/texturepacker",
+		"version": "1.0",
+		"image": "spritesheet.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 2435,
+			"h": 1617
+		},
+		"scale": "1"
+	}
+}
