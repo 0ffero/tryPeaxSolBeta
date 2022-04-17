@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 035',
+    revision: 'rev 036',
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
         'Version: 0.99 - Everything thats meant to be in the game is now in the game.',
@@ -46,7 +46,8 @@ var vars = {
         'Revision 032   - External update to batch files. One copies the tryPeax folder to the beta folder. The other compresses those files and pushes it into the git folder',
         'Revision 033   - Added sign in bonus, given each day. Theres no pop up or anything, it just gives you it.',
         'Revision 034   - Bug Fix: If compression was enabled after solutions was created a bug caused the wins and losses to fail, causing the game to halt.',
-        'Revision 035   - Daily log in bonus is now show',
+        'Revision 035   - Daily log in bonus is now shown',
+        'Revision 036   - Daily log in bonus is now fully implemented',
 
         'FUTURE REVISIONS:',
         'Unlockable tints work. Unlockable cards, not so much.',
@@ -795,8 +796,10 @@ var vars = {
 
         giveBonusUPs: ()=> {
             vars.DEBUG ? console.log(`Giving log in bonus points`) : null;
-            let lS = window.localStorage; lS.TPX_UP = ~~lS.TPX_UP+consts.unlockPoints.loginBonusUPs;
-            vars.game.unlockPoints = ~~lS.TXT_UP;
+            debugger;
+            let bonus = consts.unlockPoints.loginBonusUPs;
+            let lS = window.localStorage; lS.TPX_UP = ~~lS.TPX_UP+bonus;
+            vars.game.unlockPoints += bonus;
             vars.localStorage.dailyBonusGiven=true;
             lS.TPX_lastLogin = (~~(new Date().toISOString().split('T')[0].replaceAll('-',''))).toString(32);
         },
@@ -2521,21 +2524,37 @@ var vars = {
             if (vars.localStorage.dailyBonusGiven) { // the daily bonus for logging in was given, show a pop up
                 let container = scene.add.container().setName(`dailyBonus`);
                 container.setAlpha(0).setDepth(consts.depths.dailyBonus);
-                let bg = scene.add.image(cC.cX,cC.cY,'whitepixel').setScale(cC.width,cC.height).setTint(0x0).setAlpha(0.8).setName('dailyBonusBG').setInteractive();
+                let bg = scene.add.image(cC.cX,cC.cY,'whitepixel').setScale(cC.width,cC.height).setTint(0x0).setAlpha(0.9).setName('dailyBonusBG').setInteractive();
+                let bonusImage = scene.add.image(cC.cX,cC.cY,'dailyBonusImage');
+                let bonusText = scene.add.bitmapText(cC.cX,cC.cY,'defaultFont','250 UPs',128,1).setName(`bonusTextBouncing`).setOrigin(0.5).setTint(consts.tints.orange);
+
+                container.add([bg,bonusImage,bonusText]);
+
+                vars.input.enableInput(false);
+
+                // TWEENS
+                scene.tweens.add({ targets: container, alpha: 1, duration: 500, onComplete: ()=> { vars.input.enableInput(true); } }); // fade container in
+                scene.tweens.add({
+                    targets: bonusText, scale: 1.5,
+                    duration: 1500,
+                    repeat: -1, yoyo: true,
+                    ease: 'Bounce'
+                });
+
+                // INPUT (CLICK HANDLER FOR BG)
                 bg.on('pointerup', ()=> {
-                    vars.input.enableInput(false,250);
-                    scene.children.getByName('dailyBonus').destroy(); // get the daily bonus container and destroy
+                    let container = scene.children.getByName('dailyBonus');
+                    // kill the dailyBonus tween
+                    let bounceText = container.getByName(`bonusTextBouncing`);
+                    scene.tweens.getTweensOf(bounceText)[0].stop();
+
+                    container.destroy(); // destroy daily bonus container
+
+                    // reset the vars and begin main screen loop
                     vars.localStorage.dailyBonusGiven = null;
                     vars.UI.beginMainScreenLoop();
                     return true;
                 });
-                let bonusImage = scene.add.image(cC.cX,cC.cY,'dailyBonusImage');
-                let bonusText = scene.add.bitmapText(cC.cX,cC.cY,'defaultFont','250 UPs',128,1).setOrigin(0.5).setTint(consts.tints.orange);
-
-                container.add([bg,bonusImage,bonusText]);
-
-                vars.input.enableInput(false,750);
-                scene.tweens.add({ targets: container, alpha: 1, duration: 500 });
             } else {
                 vars.UI.beginMainScreenLoop();
             };
