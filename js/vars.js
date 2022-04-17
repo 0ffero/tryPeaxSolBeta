@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 032',
+    revision: 'rev 033',
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
         'Version: 0.99 - Everything thats meant to be in the game is now in the game.',
@@ -44,6 +44,7 @@ var vars = {
         'Revision 030   - The new _SOS (Satin Original Style) card sets now have a border on the back card (makes them stand out better).',
         'Revision 031   - Most, if not all, buttons now have a timeout associated with them to stop accidental double clicks (primarily, but is also used when dealing the cards etc)',
         'Revision 032   - External update to batch files. One copies the tryPeax folder to the beta folder. The other compresses those files and pushes it into the git folder',
+        'Revision 033   - Added sign in bonus, given each day. Theres no pop up or anything, it just gives you it.',
 
         'FUTURE REVISIONS:',
         'Unlockable tints work. Unlockable cards, not so much.',
@@ -698,6 +699,8 @@ var vars = {
             // Unlock Points
             !lS[`${pre}_UP`] ? lS[`${pre}_UP`]=0 : null;
             gV.unlockPoints = ~~lS[`${pre}_UP`];
+            !lS[`${lV.pre}_lastLogin`] ? lS[`${lV.pre}_lastLogin`] = (~~(new Date().toISOString().split('T')[0].replaceAll('-',''))).toString(32): null;
+            lV.lastLogin = parseInt(lS[`${lV.pre}_lastLogin`],32); lV.bonusUPsCheck(lV.lastLogin);
 
             // unlockable list
             if (!lS[`${pre}_unlockables`]) { // initialise the unlockables list if it doesnt exist
@@ -763,13 +766,24 @@ var vars = {
             let lV = vars.localStorage;
             let lS = window.localStorage;
             lV.cardSets.forEach((_csName)=> { // for every card set
-                if (_csName.endsWith(_ending)) { // if name ends with _OS
+                if (_csName.endsWith(_ending)) { // if name ends with _ending
                     lV.unlockables[_csName] = { unlocked: false, id: generateRandomID() }; // add it to the unlockables with a new ID
                     vars.DEBUG ? console.log(`Added ${_csName} to the unlockables list.`) : null;
                 };
             });
             // push the updated list to lS
             lS[`${lV.pre}_unlockables`] = JSON.stringify(lV.unlockables);
+        },
+
+        bonusUPsCheck: (_lL=null)=> {
+            if (!_lL) return false; if (_lL<~~(new Date().toISOString().split('T')[0].replaceAll('-','')) && _lL>20220415) { vars.localStorage.giveBonusUPs(); };
+        },
+
+        giveBonusUPs: ()=> {
+            vars.DEBUG ? console.log(`Giving log in bonus points`) : null;
+            let lS = window.localStorage; lS.TPX_UP = ~~lS.TPX_UP+consts.unlockPoints.loginBonusUPs;
+            vars.game.unlockPoints = ~~lS.TXT_UP;
+            lS.TPX_lastLogin = (~~(new Date().toISOString().split('T')[0].replaceAll('-',''))).toString(32);
         },
 
         loadSolution: (_solutionName=null)=> {

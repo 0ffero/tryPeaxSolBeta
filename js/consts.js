@@ -83,9 +83,11 @@ const consts = {
     },
 
     unlockPoints: {
+        loginBonusUPs: 250,
         randomRoll: 250,
         tint: 100,
         cardSet: 500,
-        special: 750 // some cards are "specials" gold, silver and there will probably be more eventually
+        special: 750, // some cards are "specials" gold, silver and there will probably be more eventually
+        exotic: 1000, // new card backs etc
     }
 }
