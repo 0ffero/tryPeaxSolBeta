@@ -273,10 +273,14 @@ let Unlockables = class {
     }
 
     click () {
+        let iV = vars.input;
+        if (!iV.enabled) return '%cInput is currently disabled!','color: #FF0000';
+
         // as we enter here from a phaser click, "this" is actually the sprite, NOT this class
         let gV = vars.game;
         let classObject = gV.unlockables;
-        if (this.name.startsWith('UNL_')) {
+        if (this.name.startsWith('UNL_')) { // UNLOCKABLES prev/next button
+            iV.enableInput(false,100);
             if (this.name.endsWith('previous')) {
                 classObject.optionsShowPage(false);
                 return true;
@@ -285,6 +289,7 @@ let Unlockables = class {
                 return true;
             };
         } else if (this.name.startsWith('UNLD_')) { // UNLOCKEDs prev/next buttond
+            iV.enableInput(false,100);
             if (this.name.endsWith('previous')) {
                 classObject.optionsShowPageULD(false);
                 return true;
@@ -295,11 +300,13 @@ let Unlockables = class {
         } else if (this.name==='lootboxemuBG') { // CLOSES LBE after its finished
             if (!classObject.lootBoxEmuFinished) return false; // if the emulator IS already running (ie NOT finished), ignore the click.
             // hiding the container
-            vars.game.unlockables.scrollerSwipe();
+            gV.unlockables.scrollerSwipe();
             return true;
         } else if (this.name==='randomRoll') { // start the loot box emulator
             let uP = consts.unlockPoints;
             if (gV.unlockPoints>=uP.randomRoll) {
+                // disable all input
+                iV.enableInput(false); // re-enabled after showing win message
                 classObject.lootBoxEmuFinished=false; // disable input
                 gV.unlockables.useUnlockPoints(uP.randomRoll); // deduct the UP's for a random roll
                 vars.game.unlockables.startScroller(); // and start the emulator
@@ -308,6 +315,7 @@ let Unlockables = class {
             return false; // false is returned if there arent anough unlock points
         } else if (this.name.startsWith('CSU_') || this.name.startsWith('TU_')) { // UNLOCKED CARD SET OR TINT CLICKED ON
             if (this.name.startsWith('CSU_')) {
+                iV.enableInput(false,200);
                 console.log(`Unlocked card set clicked on. Swapping current card set with this one.`);
                 
                 let cardSetName = this.getData('cardSetName');
@@ -326,8 +334,9 @@ let Unlockables = class {
                 vars.DEBUG ? console.log(`Unlocked tint set clicked on. Swapping current background tint with this one (#${tintAsString}).`) : null;
                 let currentTint = vars.localStorage.options.tint;
                 if (currentTint.toString(16).toUpperCase()===tintAsString) return false; // ignore the request if the current tint is the tint the player just clicked on
-                    
+                
                 // if we get here the tint isnt the current one, so, do the thing
+                iV.enableInput(false); // show tint actually shows the game screen, so it disables and enables input itself
                 gV.setBGTint(tintAsString);
                 gV.unlockables.moveTintTick(this);
                 return true;
@@ -1133,13 +1142,11 @@ let Unlockables = class {
 
         this.winTweens = [];
         let tween = this.scene.tweens.add({
-            targets: [wellDoneText,newUnlockText],
-            scale: 0.8,
+            targets: [wellDoneText,newUnlockText], scale: 0.8,
+            duration: 2000, hold: 500,
+            repeat: -1, yoyo: true,
             ease: 'Bounce.easeOut',
-            duration: 2000,
-            hold: 500,
-            repeat: -1,
-            yoyo: true
+            onComplete: ()=> { !vars.input.enabled ? vars.input.enableInput(true) : null; }
         });
         this.winTweens.push(tween);
 
@@ -1152,7 +1159,7 @@ let Unlockables = class {
             targets: c,
             y: -1080,
             alpha: 0,
-            duration: 500,
+            duration: 250,
             ease: 'Quad.easeIn',
             onComplete: vars.game.scrollerDestroy
         });
@@ -1165,7 +1172,8 @@ let Unlockables = class {
         // destroy the kids
         let ignoreList = ['unlockName','unlockTypeText','lootboxemuBG','topPointer','lowerPointer','fgFade','winHighlight'];
         container.getAll().forEach((_c)=> { if (!ignoreList.includes(_c.name)) { _c.destroy(); } else { _c.setAlpha(1); } });
-
+        
         container.setPosition(0,0).setAlpha(0).setVisible(false); // reset the angle, alpha and visibility
+        vars.input.enableInput(true); // enable input
     }
 }

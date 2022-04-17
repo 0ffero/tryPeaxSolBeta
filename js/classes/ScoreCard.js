@@ -183,7 +183,10 @@ let ScoreCard = class {
     }
 
     click(_oName) { // deal with the name entry screen
+        if (!vars.input.enabled) return 'Input is currently disabled!';
         if (!_oName.startsWith('HSL_')) return false;
+
+        vars.input.enableInput(false,200); // disable input for 200ms (stops accidental double clicks)
 
         let letter = _oName.replace('HSL_','');
         let updateUI = false;
@@ -254,7 +257,7 @@ let ScoreCard = class {
         vars.DEBUG ? console.groupCollapsed('%cHigh score pages >>>','color: #10FF10; font-size: 14px') : null;
         pages.forEach((_p,_pI)=> {
             this.totalPages=_pI+1; // set the total pages var (used for moving between pages. Starts at 1!)
-            console.log(`PAGE: ${this.totalPages}`);
+            vars.DEBUG ? console.log(`PAGE: ${this.totalPages}`) : null;
             _p.forEach((_score,_y)=> {
                 // position text
                 let page = _pI+1;

@@ -43,9 +43,9 @@ let LoadingBar = class {
         this.loadingBar.setScale(this.percentOfTotal, 1);
 
         if (this.percentOfTotal===1) {
-            console.log(`Loaded all files successfully. Destroying loading bar. Remember to null vars.loader`);
+            vars.DEBUG ? console.log(`Loaded all files successfully. Destroying loading bar.`) : null;
             this.destroy();
-        }
+        };
     }
 
     destroy() {

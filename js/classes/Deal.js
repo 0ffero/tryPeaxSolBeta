@@ -531,9 +531,11 @@ let Deal = class {
                 scene.sound.play(getRandom(vars.audio.available.newCard));
                 if (_o[0].data.list['position']===52) {
                     this.allCardsDealt=true; // let the ai know the cards have been dealt
+                    // re-enable input
+                    vars.input.enableInput(true);
                 };
             }
-        })
+        });
     }
 
     showNextRemainingCard(_card,_win=false) { // called from clickOnCard (from cardsLeft)
