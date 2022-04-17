@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 036',
+    revision: 'rev 037',
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
         'Version: 0.99 - Everything thats meant to be in the game is now in the game.',
@@ -48,6 +48,7 @@ var vars = {
         'Revision 034   - Bug Fix: If compression was enabled after solutions was created a bug caused the wins and losses to fail, causing the game to halt.',
         'Revision 035   - Daily log in bonus is now shown',
         'Revision 036   - Daily log in bonus is now fully implemented',
+        'Revision 037   - Fixed a bug that was stopping you clicking after using the loot box emulator. The input enable was on a tween that runs forever, hence never completes,. So Ive moved the enable input elsewhere',
 
         'FUTURE REVISIONS:',
         'Unlockable tints work. Unlockable cards, not so much.',
@@ -796,7 +797,6 @@ var vars = {
 
         giveBonusUPs: ()=> {
             vars.DEBUG ? console.log(`Giving log in bonus points`) : null;
-            debugger;
             let bonus = consts.unlockPoints.loginBonusUPs;
             let lS = window.localStorage; lS.TPX_UP = ~~lS.TPX_UP+bonus;
             vars.game.unlockPoints += bonus;
@@ -1352,6 +1352,11 @@ var vars = {
         },
 
         scrollerShowWinMessage: ()=> {
+            this.scene.tweens.addCounter({
+                from: 0, to: 1,
+                duration: 500,
+                onComplete: ()=> { !vars.input.enabled ? vars.input.enableInput(true) : null; }
+            })
             vars.game.unlockables.scrollerShowWinMessage();
         },
 

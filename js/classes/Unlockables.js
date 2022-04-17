@@ -1145,8 +1145,7 @@ let Unlockables = class {
             targets: [wellDoneText,newUnlockText], scale: 0.8,
             duration: 2000, hold: 500,
             repeat: -1, yoyo: true,
-            ease: 'Bounce.easeOut',
-            onComplete: ()=> { !vars.input.enabled ? vars.input.enableInput(true) : null; }
+            ease: 'Bounce.easeOut'
         });
         this.winTweens.push(tween);
 
