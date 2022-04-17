@@ -687,9 +687,9 @@ var vars = {
 
             // SOLUTIONS
             if (!lS[`${pre}_solutions`]) {
-                let initData = { wins: [], losses: [] };
-                if (lV.canCompress) { LZString.compressToUTF16(initData); };
-                lS[`${pre}_solutions`] = JSON.stringify(initData);
+                let initData = '{"wins":[],"losses":[]}';
+                if (lV.canCompress) { initData = LZString.compressToUTF16(initData); };
+                lS[`${pre}_solutions`] = initData;
             };
             let solutions = lV.savedSolutionsLoader();
             let solutionIDs = [];
