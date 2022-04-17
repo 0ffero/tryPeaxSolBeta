@@ -613,11 +613,19 @@ var vars = {
 
             let pre = lV.pre;
 
-            // check if saved data can be compressed
+            // CHECK IF SAVED DATA CAN BE COMPRESSED
             if (!lS[`${lV.pre}_canCompress`]) {
                 lS[`${lV.pre}_canCompress`] = LZString.compressToUTF16('CanCompress') === 'ᡢఽ堾惖\x90Ꭱ☦㭈  ' ? 'true' : 'false';
             };
             lV.canCompress = lS[`${lV.pre}_canCompress`]==='true' ? true : false;
+
+            // MAKE SURE ALL COMPRESSABLE DATA IS ACTUALLY COMPRESSED (as compression was added after the creation of some vars that use it, we need to compress them if we can)
+            if (lV.canCompress) {
+                // SOLUTION DATA
+                if (lS.TPX_solutions && lS.TPX_solutions.includes('wins') && lS.TPX_solutions.includes('losses')) { // solutions already exists in a non compressed form
+                    lS.TPX_solutions = LZString.compressToUTF16(lS.TPX_solutions); // compress the solutions that already exist
+                };
+            };
 
             // SCORES
             if (!lS[`${pre}_scores`]) lS[`${pre}_scores`] = '[{"name":"OFFER0","score":10000,"time":55},{"name":"OFFER0","score":7500,"time":65},{"name":"OFFER0","score":5000,"time":75}]';
