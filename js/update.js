@@ -9,6 +9,8 @@ vars.update = {
     tick:() => {
         vars.DEBUG ? vars.debug.update() : null;
 
+        if (vars.localStorage.dailyBonusGiven) return false; // daily bonus screen is visible
+
         if (scene.containers.mainScreen.visible && !scene.containers.splashScreen.visible) {
             vars.update.updateMainScreenButtons();
         };

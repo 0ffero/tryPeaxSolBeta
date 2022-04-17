@@ -39,6 +39,7 @@ const consts = {
         unlockedCardSpread:     180,
         scroller:               200,
         splashScreen:           300,
+        dailyBonus:             400,
         debug:                  999
     },
 
