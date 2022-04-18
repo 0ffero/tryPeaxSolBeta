@@ -33,10 +33,10 @@ vars.update = {
         // MAIN SCREEN (contains "new game" button, "options" button, "highscore" button etc and a few particles)
         // IF THE MAIN SCREEN IS VISIBLE; WE UPDATE THE CARD SUITS PARTICLES
         if (cV.current==='mainScreen') { // main screen is visible
-            !vars.particles.available.letterSparkle.active ? vars.particles.available.letterSparkle.setActive(true) : null;
+            !vars.particles.available.letterSparkle.active && !vars.isPhone ? vars.particles.available.letterSparkle.setActive(true) : null;
             vars.mainScreen.cardSuitParticlesUpdate();
         } else {
-            if (!vars.particles.available.letterSparkle) return false;
+            if (!vars.particles.available.letterSparkle || vars.isPhone) return false;
             vars.particles.available.letterSparkle.pause();
             vars.particles.available.letterSparkle.emitters.list[0].killAll();
         };

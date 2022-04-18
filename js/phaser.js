@@ -19,7 +19,7 @@ var config = {
     width: consts.canvas.width,
 
     fps: fps,
-    zoom: vars.isPhone ? 0.2 : 1,
+    zoom: vars.isPhone ? 0.5 : 1,
 
     physics: {
         default: 'arcade',

@@ -1,8 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 040.006',
-    // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
+    revision: 'rev 037',
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
         'Version: 0.99 - Everything thats meant to be in the game is now in the game.',
@@ -50,13 +49,6 @@ var vars = {
         'Revision 035   - Daily log in bonus is now shown',
         'Revision 036   - Daily log in bonus is now fully implemented',
         'Revision 037   - Fixed a bug that was stopping you clicking after using the loot box emulator. The input enable was on a tween that runs forever, hence never completes,. So Ive moved the enable input elsewhere',
-        'Revision 038   - Added a delay to the debug updater (60 times a second was overkill, changed to 1/10s)',
-        'Revision 039   - Added Loader for unlockables, which delays the splash screen as it was reducing it to a few frames per second (as the textures were being created)',
-        'Revision 040   - Increased the particle count for the main screen for non phones (as phones no longer show sparkles on main screen).',
-
-        'SPEED UP REVISIONS (mainly for phones)',
-        'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
-        'Revision 001 - 006 - Replaced the splashScreen for phones only. (changes to rotators and particles).',
 
         'FUTURE REVISIONS:',
         'Unlockable tints work. Unlockable cards, not so much.',
@@ -140,9 +132,7 @@ var vars = {
             });
             particleArray.push('');
 
-            let othersArray = ['','OTHERS','INPUT', `Enabled: ${vars.input.enabled}`];
-
-            let fullArray = [...header, ...particleArray, ...containerArray,...statArray,...othersArray];
+            let fullArray = [...header, ...particleArray, ...containerArray,...statArray];
 
             let debug = vars.debug.overlayObject;
             debug.setText(fullArray);
@@ -2086,27 +2076,6 @@ var vars = {
         },
 
 
-        splashScreenCirclesCreate: ()=> { // only used on phones as rotating big images and fading them in is really slow
-            let cC = consts.canvas;
-            var particles = scene.add.particles('flares');
-            vars.particles.available.splashScreenCircles = particles;
-
-            let soykils = [];
-            let radii = [cC.height*0.45,cC.height*0.6,cC.height*0.75];
-            radii.forEach((_rad)=> { soykils.push(new Phaser.Geom.Circle(0, 0, _rad)); });
-
-            soykils.forEach((_soical,_i)=> {
-                let soykil = soykils[_i];
-                particles.createEmitter({
-                    frame: 'white',
-                    x: cC.cX, y: cC.cY,
-                    alpha: 0.2*(_i+1), scale: { start: 0.3, end: 0.1 },
-                    lifespan: 250*(_i+1), quantity: 1,
-                    blendMode: 'ADD', emitZone: { type: 'edge', source: soykil, quantity: 32+((_i+1)*16) }
-                });
-            });
-        },
-
         cardSuitsInit: ()=> {
             let pV = vars.particles;
             pV.available.heartShape = scene.add.particles('flares').setDepth(consts.depths.mainScreen);
@@ -2260,18 +2229,13 @@ var vars = {
             pV.available.letterSparkle.createEmitter({
                 x: 0, y: 0,
                 frame: 'white',
-                //tint: 0xff0000,
-                quantity: 50, lifespan: 1000, gravityY: 1,
-                scale: { start: 0, end: 0.2 },
+                tint: 0xff0000,
+                quantity: 10, lifespan: 500, gravityY: 1,
+                scale: { start: 0, end: 0.5 },
                 alpha: { start: 0.5, end: 0 },
-                blendMode: 1,
+                blendMode: 0,
                 emitZone: { type: 'random', source: vars.phaserObject.mainScreen }
             });
-
-            if (vars.isPhone) {
-                vars.particles.available.letterSparkle.pause();
-                vars.particles.available.letterSparkle.emitters.list[0].killAll();
-            };
         },
 
 
@@ -2803,42 +2767,48 @@ var vars = {
             let bg = scene.add.image(cC.cX, cC.cY, 'logoScreen', 'background').setDepth(depth-1);
             container.add(bg);
 
-            if (vars.isPhone) { // this is a phone, use particles
-                vars.particles.splashScreenCirclesCreate();
-                container.add(vars.particles.available.splashScreenCircles);
-            } else { // not a phone, use rotating images
-                let circles = [];
-                [100,90,80].forEach((_scale)=> {
-                    let circle = scene.add.image(cC.cX, cC.cY, 'logoScreen', 'outerCircle').setDepth(depth).setScale(_scale/100);
-                    container.add(circle);
-                    circles.push(circle);
-                });
-                
-                // 3 outer circles
-                // initial angle of centre rotator
-                let angle = getRandom(0,35)*10;
-                let innerRotator = scene.add.image(cC.cX, cC.cY, 'logoScreen', 'rotatorCentre').setDepth(depth).setAngle(angle);
-                container.add(innerRotator);
-                // tween the fuck outta the circles n shiz
-                scene.tweens.add({ targets: [circles[0], circles[2]], angle: '+=20', duration: 3900 });
-                scene.tweens.add({ targets: [circles[1],innerRotator], angle: '-=20', duration: 3900 });
-            };
-            
-            let logoInner = scene.add.image(cC.cX, cC.cY+60, 'logoScreen', 'ogsInner').setDepth(depth+2);
+            // initial angle
+            // 3 outer circles
+            let circles = [];
+            [100,90,80].forEach((_scale)=> {
+                let circle = scene.add.image(cC.cX, cC.cY, 'logoScreen', 'outerCircle').setDepth(depth).setScale(_scale/100);
+                container.add(circle);
+                circles.push(circle);
+            });
+
             let angle = getRandom(0,35)*10;
-            let logoOuter = scene.add.image(cC.cX, cC.cY-6, 'logoScreen', 'ogsOuter').setDepth(depth+1).setAngle(angle);
+            let innerRotator = scene.add.image(cC.cX, cC.cY, 'logoScreen', 'rotatorCentre').setDepth(depth).setAngle(angle);
 
-            container.add([logoInner,logoOuter]);
+            let logoInner = scene.add.image(cC.cX, cC.cY, 'logoScreen', 'ogsInner').setDepth(depth+2);
+            let logoOuter = scene.add.image(cC.cX, cC.cY-66, 'logoScreen', 'ogsOuter').setDepth(depth+1).setAngle(angle);
 
-            // outer part of the logo
-            scene.tweens.add({ targets: logoOuter, angle: '-=20', duration: 3900 });
+            container.add([innerRotator,logoInner,logoOuter]);
 
-            // tween the container in, hold then fade out
+            // tween the fuck outta the circles n shiz
+            if (!vars.isPhone) {
+                scene.tweens.add({
+                    targets: [circles[0], circles[2]],
+                    angle: '+=20',
+                    duration: 4900
+                });
+                scene.tweens.add({
+                    targets: [circles[1], innerRotator, logoOuter],
+                    angle: '-=20',
+                    duration: 4900
+                });
+            }
+
             scene.tweens.add({
                 targets: container,
                 alpha: 1,
-                duration: 1000, hold: 2000, yoyo: true,
-                onComplete: (_t,_o)=> { _o[0].destroy(); vars.init('GAMESCREENS'); }
+                duration: 1500,
+                hold: 2000,
+                yoyo: true,
+                onComplete: (_t,_o)=> {
+                    _o[0].destroy();
+                    // show main screen
+                    vars.init('GAMESCREENS');
+                }
             });
         },
 

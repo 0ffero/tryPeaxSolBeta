@@ -40,12 +40,10 @@ let Unlockables = class {
         let cC = consts.canvas;
         this.loadingContainer = this.scene.add.container();
         // create a background for the loader
-        let bg = this.scene.add.image(cC.cX,cC.cY,'whitepixel').setTint(0x111122).setScale(cC.width,cC.height)
+        let bg = this.scene.add.image(cC.cX,cC.cY,'whitePixel').setTint(0x111122).setScale(cC.width,cC.height).setAlpha(0.75);
         // When an unlockable is loaded the ulIcon will pulse.
         this.ulIcon = this.scene.add.image(cC.cX,cC.height*0.4,'unlockablesLoadingImage');
-        // ulIcon pulse: To make sure we dont already have a tween running we use the next var
-        this.loadingTween = null;
-
+        
         // a text object that we can update as the files load
         this.ulsLoadedText = this.scene.add.bitmapText(cC.cX, cC.height*0.65, 'defaultFont', 'Unlockables Loaded: 0', 64, 1).setOrigin(0,0.5);
         this.ulsLoadedText.x-=this.ulsLoadedText.width/2;
@@ -103,28 +101,15 @@ let Unlockables = class {
 
     destroyLoaderContainer() {// called from filesLoaded (after last file is loaded)
         this.filesLoadedCount = null; // let the fileLoaded function know we should ignore anything loaded after this point
-
-        this.loadingTween ? this.loadingTween.remove() : null; // make sure theres no tween running
         this.loadingContainer.destroy(); // destroy the container
     }
 
     fileLoaded(_fileData) { // used when a single file is loaded
         if (!vars.checkType(this.filesLoadedCount,'integer')) return false;
+        if (_fileData.type!=='image') return false;
         // update the loaded counter
         this.filesLoadedCount++;
         this.ulsLoadedText.setText(`Unlockables Loaded: ${this.filesLoadedCount}`);
-
-        if (!this.loadingTween) { // no tween exists, pulse the ulIcon
-            this.loadingTween = this.scene.tweens.add({
-                targets: this.ulIcon,
-                scale: 1.25,
-                duration: 125,
-                onComplete: (_t,_o)=> {
-                    // the tween could be removed (by destroyLoader) by the time onComplete runs, so we MUST check if tween exists
-                    vars.game.unlockables.loadingTween ? vars.game.unlockables.loadingTween=null : null;
-                }
-            });
-        };
     }
 
     filesLoaded() { // after all files have loaded, we come here which then builds the UI
