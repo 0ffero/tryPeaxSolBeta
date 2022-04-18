@@ -59,6 +59,7 @@ var vars = {
     DEBUG: true,
 
     debug: {
+        delay: null, delayMax: null,
         stackedDeck: false,
         overlayObject: null,
         overlayBG: null,
@@ -100,7 +101,11 @@ var vars = {
 
         update: ()=> {
             let dV = vars.debug;
-            !dV.overlayObject ? dV.overlayInit() : null;
+            if (!dV.overlayBG || !dV.overlayBG.visible || dV.delay===null) return false;
+            dV.delay!==null && !dV.overlayObject ? dV.overlayInit() : null;
+            if (dV.delay) { dV.delay--; return false; }
+
+            dV.delay=dV.delayMax;
             dV.updateOverlay();
             dV.move();
         },
@@ -202,21 +207,28 @@ var vars = {
             break;
             case 'CREATE': // CREATES
                 // we can safely delete the loader var
-                delete(vars.loader);vars.audio.init();
-
+                delete(vars.loader);
+                
+                vars.audio.init();
                 vars.containers.init();
                 vars.groups.init();
+
+                // the groups and container have now been built, which means we can start building UI stuff
                 vars.game.unlockables = new Unlockables(scene); // initialise the unlockables. Loads its own files and generates new UI with container
+                
+                // init stuff needed for the game and specifically for the main screen
                 vars.input.init();
                 vars.music.init();
                 vars.paths.init();
                 vars.shaders.init();
-                vars.UI.init(); // UI also initialises PARTICLES
+                vars.UI.init();
+
+                // Build the score card
                 vars.game.scoreCard = new ScoreCard(scene);
                 vars.scrollers.init();
             break;
             case 'GAMESCREENS':
-                vars.UI.initMainScreen();
+                vars.UI.initMainScreen(); // also initialises PARTICLES
                 vars.UI.initGameScreen();
                 vars.UI.initOptionsScreen();
             break;
@@ -340,6 +352,9 @@ var vars = {
                 scene.load.image('gameBG', `${folder}/game_background.jpg`);
                 scene.load.image('whitePixel', `${folder}/whitePixel.png`);
                 scene.load.image('mainScreenMask', `${folder}/mainScreen/welcomeText.png`);
+
+                scene.load.image('unlockablesLoadingImage', `${folder}/ui/unlockablesLoadingImage.png`);
+
 
                 // card sets
                 let cardSet = vars.game.cardSet;
@@ -1040,6 +1055,8 @@ var vars = {
     },
 
     anims: {
+        allowCrossFade: true,
+
         init: function() {
             vars.DEBUG ? console.log(`%cFN: anims > init`, `${consts.console.defaults} ${consts.console.colours.functionCall}`) : null;
             
@@ -2023,6 +2040,9 @@ var vars = {
             pV.fiveHundredInit();
             pV.sparklesInit();
             pV.multiplierHighlightInit();
+
+            // this is built if we are running on mobile as shaders are too GPU (CPU?) intensive
+            //vars.isPhone ? pV.fireworksInit() : null;
         },
 
         clubShape: {
@@ -2093,6 +2113,45 @@ var vars = {
 
         },
 
+        fireworksInit: ()=> {
+            let cC = consts.canvas;
+            let v2 = Phaser.Math.Vector2;
+            let p0 = new v2(cC.width*0.25, cC.height*0.8);
+            let p1 = new v2(cC.width*0.25, cC.height*0.3);
+            let p2 = new v2(cC.width*0.75, cC.height*0.3);
+            let p3 = new v2(cC.width*0.75, cC.height*0.8);
+
+            let curve = new Phaser.Curves.CubicBezier(p0, p1, p2, p3);
+
+            let mult = vars.isPhone ? 2 : 1; // lower end phones need a multiplier of 2. better phones mult can be 1
+            let max = 28 * (1/mult);
+            let pt = [];
+
+            for (let c=0; c<=max; c++) { let t = curve.getUtoTmapping(c / max); pt.push([curve.getPoint(t),curve.getTangent(t)]) };
+
+            
+            let sparks = scene.add.particles('flares');
+            let pV = vars.particles;
+            pV.available.fireworks = sparks;
+
+            // build the emitters
+            let tempVec = new v2();
+            for (let i = 0; i < pt.length; i++) {
+                let p = pt[i][0];
+                tempVec.copy(pt[i][1]).normalizeRightHand().scale(-32).add(p);
+                let angle = Phaser.Math.RadToDeg(Phaser.Math.Angle.BetweenPoints(p, tempVec));
+                let particles = sparks;
+                particles.createEmitter({
+                    frame: i%2 ? 'red':'blue',
+                    x: tempVec.x, y: tempVec.y,
+                    angle: angle, scale: { start: 0.4*mult, end: 0.1 },
+                    speed: { min: -100, max: 500 }, gravityY: 200, lifespan: 800, blendMode: 'SCREEN'
+                });
+            };
+
+            pV.fireworksEnable(false); // disable the particles until needed
+        },
+
         fiveHundredInit: ()=> {
             let pV = vars.particles;
             let particles = pV.available.fiveHundred = scene.add.particles('flares');
@@ -2123,6 +2182,16 @@ var vars = {
             container.add(particles); // to easily tween the 500's size we need to add it to a container and modify its size
 
             container.setAlpha(0).setVisible(0);
+        },
+
+        fireworksEnable: (_enable=true)=> {
+            let particles = vars.particles.available.fireworks;
+            if (_enable) {
+                particles.resume();
+            } else {
+                particles.pause(); // pause emitter
+                particles.emitters.list.forEach((_e)=> { _e.killAll() }); // kill all particles
+            }
         },
 
         fiveHundredShow: (_show=true)=> {
@@ -2363,6 +2432,7 @@ var vars = {
             vars.DEBUG ? console.log(`%cFN: shaders > init`, `${consts.console.defaults} ${consts.console.colours.functionCall}`) : null;
 
             let sV = vars.shaders;
+            sV.fireworksRes = vars.isPhone ? 1/10 : 1/2;
             let res = sV.fireworksRes;
             let c = consts.canvas;
             scene.shaders = {};
@@ -2717,16 +2787,18 @@ var vars = {
             container.add([innerRotator,logoInner,logoOuter]);
 
             // tween the fuck outta the circles n shiz
-            scene.tweens.add({
-                targets: [circles[0], circles[2]],
-                angle: '+=20',
-                duration: 4900
-            });
-            scene.tweens.add({
-                targets: [circles[1], innerRotator, logoOuter],
-                angle: '-=20',
-                duration: 4900
-            });
+            if (!vars.isPhone) {
+                scene.tweens.add({
+                    targets: [circles[0], circles[2]],
+                    angle: '+=20',
+                    duration: 4900
+                });
+                scene.tweens.add({
+                    targets: [circles[1], innerRotator, logoOuter],
+                    angle: '-=20',
+                    duration: 4900
+                });
+            }
 
             scene.tweens.add({
                 targets: container,

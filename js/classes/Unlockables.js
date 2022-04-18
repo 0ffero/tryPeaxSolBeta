@@ -36,11 +36,37 @@ let Unlockables = class {
 
     // INIT FUNCTIONS
     init() {
+        // BUILD THE LOADING CONTAINER
+        let cC = consts.canvas;
+        this.loadingContainer = this.scene.add.container();
+        // create a background for the loader
+        let bg = this.scene.add.image(cC.cX,cC.cY,'whitepixel').setTint(0x111122).setScale(cC.width,cC.height)
+        // When an unlockable is loaded the ulIcon will pulse.
+        this.ulIcon = this.scene.add.image(cC.cX,cC.height*0.4,'unlockablesLoadingImage');
+        // ulIcon pulse: To make sure we dont already have a tween running we use the next var
+        this.loadingTween = null;
+
+        // a text object that we can update as the files load
+        this.ulsLoadedText = this.scene.add.bitmapText(cC.cX, cC.height*0.65, 'defaultFont', 'Unlockables Loaded: 0', 64, 1).setOrigin(0,0.5);
+        this.ulsLoadedText.x-=this.ulsLoadedText.width/2;
+
+        // add everything to the container
+        this.loadingContainer.add([bg,this.ulIcon,this.ulsLoadedText]);
+
+
+
+
         // EVERYTHING BELOW HERE NEEDS LOADING!
         this.scene.load.setPath('assets/'); // initialise the loader to load from /assets/
         this.initCardSetsAndTints();
         this.initOtherFiles(); // anything else used by unlockables
 
+        this.filesLoadedCount=0;
+        // on loading each file
+        this.scene.load.on('load', (_fileData)=> {
+            let classUL = vars.game.unlockables;
+            classUL.fileLoaded(_fileData);
+        });
         // make sure we know when all files have loaded so we can build the unlock box on the OPTIONS screen
         this.scene.load.once('complete', this.filesLoaded, this);
         // and load everything
@@ -75,8 +101,40 @@ let Unlockables = class {
         this.scene.load.audio('tick', `${this.folder}/audio/tick.ogg`);
     }
 
+    destroyLoaderContainer() {// called from filesLoaded (after last file is loaded)
+        this.filesLoadedCount = null; // let the fileLoaded function know we should ignore anything loaded after this point
+
+        this.loadingTween ? this.loadingTween.remove() : null; // make sure theres no tween running
+        this.loadingContainer.destroy(); // destroy the container
+    }
+
+    fileLoaded(_fileData) { // used when a single file is loaded
+        if (!vars.checkType(this.filesLoadedCount,'integer')) return false;
+        // update the loaded counter
+        this.filesLoadedCount++;
+        this.ulsLoadedText.setText(`Unlockables Loaded: ${this.filesLoadedCount}`);
+
+        if (!this.loadingTween) { // no tween exists, pulse the ulIcon
+            this.loadingTween = this.scene.tweens.add({
+                targets: this.ulIcon,
+                scale: 1.25,
+                duration: 125,
+                onComplete: (_t,_o)=> {
+                    // the tween could be removed (by destroyLoader) by the time onComplete runs, so we MUST check if tween exists
+                    vars.game.unlockables.loadingTween ? vars.game.unlockables.loadingTween=null : null;
+                }
+            });
+        };
+    }
+
     filesLoaded() { // after all files have loaded, we come here which then builds the UI
-        this.buildUI();
+        this.destroyLoaderContainer(); // destroy the loader container
+
+        this.buildUI(); // build the unlocklable pages
+
+        // Now we can show the vanity page
+        if (vars.isPhone) return true; // splash screen isnt show until loading image has fully faded out
+        vars.UI.buildSplashScreen();
     }
 
     readyCardSetsForLoader() {
