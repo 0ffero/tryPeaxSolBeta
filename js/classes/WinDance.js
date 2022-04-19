@@ -229,7 +229,6 @@ let winDance = class {
     }
 
     moveAllCardsToWD() {
-        if (!vars.DEBUG) return false;
         if (scene.groups.winDance.getLength()===52) return true;
 
         let depth = 13*4+5; // make sure the groups lowest card is higher than the board (bg)

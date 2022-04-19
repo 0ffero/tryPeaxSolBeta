@@ -599,7 +599,7 @@ let Deal = class {
     updatePlayerStats() { // move to deal (or deck?)
         if (!this.startTime) return false; // stats have already been updated for this game (This WAS a fic for a BUG. Bug is now fixed at root of problem. It is best to check anyway as startTime is nulled below)
 
-        console.log(`Updating player stats`);
+        vars.DEBUG ? console.log(`Updating player stats`) : null;
         let gV = vars.game;
         let pStats = gV.playerStats;
 

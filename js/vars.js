@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 040.006',
+    revision: 'rev 041.006',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -53,6 +53,7 @@ var vars = {
         'Revision 038   - Added a delay to the debug updater (60 times a second was overkill, changed to 1/10s)',
         'Revision 039   - Added Loader for unlockables, which delays the splash screen as it was reducing it to a few frames per second (as the textures were being created)',
         'Revision 040   - Increased the particle count for the main screen for non phones (as phones no longer show sparkles on main screen).',
+        'Revision 041   - Bug Fix. Fixed a weird bug where moving all cards to winDance would be ignored if DEBUG was false... wtf? TESTED WORKING',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -64,7 +65,7 @@ var vars = {
 
     ],
 
-    DEBUG: true,
+    DEBUG: false,
 
     debug: {
         delay: null, delayMax: null,
