@@ -40,7 +40,7 @@ let Unlockables = class {
         let cC = consts.canvas;
         this.loadingContainer = this.scene.add.container();
         // create a background for the loader
-        let bg = this.scene.add.image(cC.cX,cC.cY,'whitePixel').setTint(0x111122).setScale(cC.width,cC.height).setAlpha(0.75);
+        let bg = this.scene.add.image(cC.cX,cC.cY,'whitePixel').setTint(0x111122).setScale(cC.width,cC.height).setAlpha(0.95);
         // When an unlockable is loaded the ulIcon will pulse.
         this.ulIcon = this.scene.add.image(cC.cX,cC.height*0.4,'unlockablesLoadingImage');
         
@@ -949,7 +949,7 @@ let Unlockables = class {
         } else if (lbe.delay>0) {
             lbe.delay--;
         } else if (lbe.speed>0 && !lbe.speedingUp) {
-            lbe.speed--;
+            lbe.speed-=0.25;
         } else if(lbe.speedingUp) {
             lbe.speedingUp=false;
         } else if (!lbe.speed && !lbe.speedingUp) { // finished

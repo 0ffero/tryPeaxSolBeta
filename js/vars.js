@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 041.006',
+    revision: 'rev 042.006',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -54,14 +54,14 @@ var vars = {
         'Revision 039   - Added Loader for unlockables, which delays the splash screen as it was reducing it to a few frames per second (as the textures were being created)',
         'Revision 040   - Increased the particle count for the main screen for non phones (as phones no longer show sparkles on main screen).',
         'Revision 041   - Bug Fix. Fixed a weird bug where moving all cards to winDance would be ignored if DEBUG was false... wtf? TESTED WORKING',
+        'Revision 042   - Changed LBE so it comes to a more gradual stop',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
-        'Revision 001 - 006 - Replaced the splashScreen for phones only. (changes to rotators and particles).',
+        'Revision 002 - 006 - Replaced the splashScreen for phones only. (changes to rotators and particles).',
 
         'FUTURE REVISIONS:',
-        'Unlockable tints work. Unlockable cards, not so much.',
-        'Slow down the scroller so that it takes longer to slow down to 0'
+        'Unlockable tints work. Unlockable cards, not so much.'
 
     ],
 
@@ -198,7 +198,8 @@ var vars = {
     },
 
     BUGS: [
-        
+        'When viewing a replay of a game after entering your name, the multiplier etc is faded out. This is because youve won a game, so alphas are already set low. Hence ignoring the bonusFG etc IS simply leaving them as is.',
+        'Fix: On replay reset everything to 1 alpha then fade everything out again. This might need to be "remembered" so we can fade out the appropriate stuff for the next game.'
     ],
 
     TODO: [
