@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 044.006',
+    revision: 'rev 045.006',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -57,6 +57,7 @@ var vars = {
         'Revision 042   - Changed LBE so it comes to a more gradual stop',
         'Revision 043   - Lol. So I created the unlockables icon on the Gateway and its colour accuracy is just horrible. Remade in on Main. Also added it to ui atlas.',
         'Revision 044   - Bug fix. UL Tint. When clicking on a tint, upon coming back to options it didnt re-enable input',
+        'Revision 045   - Added button on unlocks page to switch between unlockables and unlockeds',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -67,7 +68,7 @@ var vars = {
 
     ],
 
-    DEBUG: true,
+    DEBUG: false,
 
     debug: {
         delay: null, delayMax: null,
@@ -2701,14 +2702,16 @@ var vars = {
 
             // HEADERS
             let optionsHeader = scene.add.image(330,155,'ui','optionsHeader');
-            let unlockablesHeader = scene.add.image(775,155,'ui','unlockablesHeader').setName('unlockablesHeader').setOrigin(0,0.5).setInteractive();
+            let unlockSwapButton = scene.add.image(805,155,'ui','changeUnlockTypeIcon').setName('unlockablesHeader_button').setInteractive();
+            unlockSwapButton.on('pointerup', vars.input.switchVisibleUnlocksContainer);
+            let unlockablesHeader = scene.add.image(865,155,'ui','unlockablesHeader').setName('unlockablesHeader').setOrigin(0,0.5).setInteractive();
             unlockablesHeader.on('pointerup', vars.input.switchVisibleUnlocksContainer);
             let unlockPoints = vars.game.unlockPoints;
             let upCount = scene.add.bitmapText(cC.width-245, 155, 'defaultFont', unlockPoints, 48).setOrigin(1,0.5).setName(`optionsScreenUPCount`).setTint(0xFFBC00);
             let coinImage = scene.add.image(cC.width-205, 155,'coins','gold').setName('UIOUPCoin').setScale(0.75);
 
             let musicHeader = scene.add.image(315,400,'ui','musicHeader');
-            container.add([optionsHeader,unlockablesHeader,musicHeader,upCount,coinImage]);
+            container.add([optionsHeader,unlockablesHeader,unlockSwapButton,musicHeader,upCount,coinImage]);
 
             // MUSIC TRACKS SECTION
             let x = 530; let y = 510;
