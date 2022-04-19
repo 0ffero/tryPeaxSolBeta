@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 042.006',
+    revision: 'rev 043.006',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -55,6 +55,7 @@ var vars = {
         'Revision 040   - Increased the particle count for the main screen for non phones (as phones no longer show sparkles on main screen).',
         'Revision 041   - Bug Fix. Fixed a weird bug where moving all cards to winDance would be ignored if DEBUG was false... wtf? TESTED WORKING',
         'Revision 042   - Changed LBE so it comes to a more gradual stop',
+        'Revision 043   - Lol. So I created the unlockables icon on the Gateway and its colour accuracy is just horrible. Remade in on Main. Also added it to ui atlas.',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -362,8 +363,6 @@ var vars = {
                 scene.load.image('gameBG', `${folder}/game_background.jpg`);
                 scene.load.image('whitePixel', `${folder}/whitePixel.png`);
                 scene.load.image('mainScreenMask', `${folder}/mainScreen/welcomeText.png`);
-
-                scene.load.image('unlockablesLoadingImage', `${folder}/ui/unlockablesLoadingImage.png`);
 
 
                 // card sets

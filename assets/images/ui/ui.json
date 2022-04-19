@@ -740,6 +740,26 @@
 				"h": 45
 			}
 		},
+		"unlockablesLoadingImage": {
+			"frame": {
+				"x": 2300,
+				"y": 590,
+				"w": 99,
+				"h": 158
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 99,
+				"h": 158
+			},
+			"sourceSize": {
+				"w": 99,
+				"h": 158
+			}
+		},
 		"unlockedHeader": {
 			"frame": {
 				"x": 1172,

@@ -42,7 +42,7 @@ let Unlockables = class {
         // create a background for the loader
         let bg = this.scene.add.image(cC.cX,cC.cY,'whitePixel').setTint(0x111122).setScale(cC.width,cC.height).setAlpha(0.95);
         // When an unlockable is loaded the ulIcon will pulse.
-        this.ulIcon = this.scene.add.image(cC.cX,cC.height*0.4,'unlockablesLoadingImage');
+        this.ulIcon = this.scene.add.image(cC.cX,cC.height*0.4,'ui','unlockablesLoadingImage');
         
         // a text object that we can update as the files load
         this.ulsLoadedText = this.scene.add.bitmapText(cC.cX, cC.height*0.65, 'defaultFont', 'Unlockables Loaded: 0', 64, 1).setOrigin(0,0.5);
