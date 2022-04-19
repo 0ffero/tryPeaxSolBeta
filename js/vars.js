@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 043.006',
+    revision: 'rev 044.006',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -56,6 +56,7 @@ var vars = {
         'Revision 041   - Bug Fix. Fixed a weird bug where moving all cards to winDance would be ignored if DEBUG was false... wtf? TESTED WORKING',
         'Revision 042   - Changed LBE so it comes to a more gradual stop',
         'Revision 043   - Lol. So I created the unlockables icon on the Gateway and its colour accuracy is just horrible. Remade in on Main. Also added it to ui atlas.',
+        'Revision 044   - Bug fix. UL Tint. When clicking on a tint, upon coming back to options it didnt re-enable input',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -66,7 +67,7 @@ var vars = {
 
     ],
 
-    DEBUG: false,
+    DEBUG: true,
 
     debug: {
         delay: null, delayMax: null,
@@ -100,11 +101,7 @@ var vars = {
 
         switchOverlayVisibility: ()=> {
             let dV = vars.debug;
-            let show=true;
-            if (dV.overlayBG.visible) {
-                show=false;
-            };
-
+            let show = dV.overlayBG.visible ? false : true;
             dV.overlayBG.visible=show;
             dV.overlayObject.visible=show;
         },
@@ -1430,7 +1427,7 @@ var vars = {
                 yoyo: true,
                 onComplete: ()=> {
                     vars.UI.showGameplayUI(true);
-                    iV.enableInput(true); // enable input again
+                    vars.input.enableInput(true); // enable input again
                 }
             });
         },
