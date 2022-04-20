@@ -872,8 +872,10 @@ let Unlockables = class {
     }
 
     updateUIUnlockPoints() {
-        vars.containers.getByName('optionsScreen').getByName(`optionsScreenUPCount`).setText(vars.game.unlockPoints);
-        vars.containers.getByName('gamePlayingUI').getByName(`playersUPCount`).setText(vars.game.unlockPoints);
+        let UPs = vars.game.unlockPoints;
+        vars.containers.getByName('optionsScreen').getByName(`optionsScreenUPCount`).setText(UPs);
+        vars.containers.getByName('gamePlayingUI').getByName(`playersUPCount`).setText(UPs);
+        vars.containers.getByName('mainScreen').getByName(`playersUPCountMainScreen`).setText(`${UPs} Unlock Points`);
     }
 
     useUnlockPoints(_points) { // currently only used by randomRoll, but will be used for outright unlocking

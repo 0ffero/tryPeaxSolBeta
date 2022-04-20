@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 045.006',
+    revision: 'rev 052.006',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -58,6 +58,10 @@ var vars = {
         'Revision 043   - Lol. So I created the unlockables icon on the Gateway and its colour accuracy is just horrible. Remade in on Main. Also added it to ui atlas.',
         'Revision 044   - Bug fix. UL Tint. When clicking on a tint, upon coming back to options it didnt re-enable input',
         'Revision 045   - Added button on unlocks page to switch between unlockables and unlockeds',
+        'Revision 046   - Moved the unlock points type to a new container above the cards',
+        'Revision 047   - Coins werent in a container (they just had a depth of 1 - The reason for this was to have the coins above the gameplayui) so now theyre in the same bonus container as 046',
+        'Revision 048 - 051 - Modified the mainScreen so it shows the current UP count for the player',
+        'Revision 052   - Fixed debug overlay',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -68,7 +72,7 @@ var vars = {
 
     ],
 
-    DEBUG: false,
+    DEBUG: true,
 
     debug: {
         delay: null, delayMax: null,
@@ -80,6 +84,7 @@ var vars = {
             let cC = consts.canvas;
             let dV = vars.debug;
             dV.overlayObject = scene.add.text(cC.width-10,cC.height-120, [],{ fontSize: '18px', fontWeight: 'bold', lineSpacing: 7 }).setOrigin(1).setData({wh:[0,0]}).setDepth(999).setVisible(false);
+            dV.updateOverlay();
 
             scene.cursors = scene.input.keyboard.createCursorKeys();
             scene.input.keyboard.on('keydown-DELETE', (_e)=> {
@@ -91,8 +96,8 @@ var vars = {
         move: ()=> {
             let dV = vars.debug;
             let xy = [0,0];
-            if (scene.cursors.left.isDown) { xy[0] = -10; } else if (scene.cursors.right.isDown) { xy[0] = 10; };
-            if (scene.cursors.up.isDown) { xy[1] = -10; } else if (scene.cursors.down.isDown) { xy[1] = 10; };
+            if (scene.cursors.left.isDown) { xy[0] = -50; } else if (scene.cursors.right.isDown) { xy[0] = 50; };
+            if (scene.cursors.up.isDown) { xy[1] = -50; } else if (scene.cursors.down.isDown) { xy[1] = 50; };
 
             dV.overlayBG.x+=xy[0];
             dV.overlayBG.y+=xy[1];
@@ -109,10 +114,10 @@ var vars = {
 
         update: ()=> {
             let dV = vars.debug;
-            if (!dV.overlayBG || !dV.overlayBG.visible || dV.delay===null) return false;
-            dV.delay!==null && !dV.overlayObject ? dV.overlayInit() : null;
             if (dV.delay) { dV.delay--; return false; }
-
+            dV.delay!==null && !dV.overlayObject ? dV.overlayInit() : null;
+            if (!dV.overlayBG || !dV.overlayBG.visible || dV.delay===null) return false;
+            
             dV.delay=dV.delayMax;
             dV.updateOverlay();
             dV.move();
@@ -482,6 +487,10 @@ var vars = {
             scene.containers.fiveHundred = scene.add.container().setName('fiveHundred');
             scene.containers.fiveHundred.setDepth(depths.fiveHundred).setVisible(false).setAlpha(0).setPosition(0,70);
 
+            scene.containers.bonusPoints = scene.add.container().setName('bonusPoints');
+            scene.containers.bonusPoints.setDepth(depths.bonusPointsContainier).setVisible(false).setAlpha(0);
+            
+
             scene.containers.unlockedCardSpread = scene.add.container().setName('unlockedCardSpread').setDepth(depths.unlockedCardSpread).setAlpha(0).setVisible(false);
         },
 
@@ -796,6 +805,11 @@ var vars = {
                 };
             };
 
+            if (!lS[`${pre}_unlockKey`]) {
+                lS[`${pre}_unlockKey`]='';
+            };
+            lV.unlocked = lS[`${pre}_unlockKey`] ? true : false;
+
         },
 
         addNewCardSets: (_ending=null)=> {
@@ -1095,6 +1109,54 @@ var vars = {
                     })
                 }
             })
+        },
+
+        mainPageUPCount: ()=> {
+            let unlockPoints = vars.game.unlockPoints;
+            if (!unlockPoints) return false;
+
+            // player has UP coins, start the count up
+            scene.tweens.addCounter({
+                from: 0, to: unlockPoints,
+                duration: 2000,
+                // update the UP count
+                onUpdate: (_t,_v)=> {
+                    scene.containers.mainScreen.getByName(`playersUPCountMainScreen`).setText(`${~~_v.value} Unlock Points`);
+                }
+            });
+        },
+
+        startMainScreenUP: ()=> {
+            let container = scene.containers.mainScreen;
+            let objects = [];
+            ['UIUPCoinMainScreen','playersUPCountMainScreen'].forEach((_oName)=> {
+                objects.push(container.getByName(_oName));
+            });
+
+            objects.forEach((_o)=> {
+                if (_o.name.includes('Coin')) {
+                    // tween 1 - alpha the coin in
+                    scene.tweens.add({ targets: _o, alpha: 1, duration: 500 });
+
+                    // tween 2  - move to the correct X position
+                    scene.tweens.add({
+                        targets: _o, x: _o.x-270,
+                        duration: 500, delay: 500 // fade in time
+                    });
+                } else if (_o.name.includes('Count')) {
+                    // tween 1 - alpha the count in (delayed by 1 second - ie the time it takes for the coing to fade in and move)
+                    scene.tweens.add({ targets: _o, alpha: 1, duration: 500, delay: 1000 });
+
+                    // tween 2  - move to the correct X position
+                    scene.tweens.add({
+                        targets: _o, x: _o.x+90,
+                        duration: 500, delay: 1500, // fade in and move time for the coin image
+                        onComplete: (_t,_o)=> { vars.anims.mainPageUPCount(); }
+                    });
+                } else {
+                    console.error(`Unknown object (${_o.name}) !`);
+                }
+            });
         }
     },
 
@@ -1287,7 +1349,7 @@ var vars = {
             uPD.UPTotal = uPD.scorePoints + uPD.timePoints; // 114 + 22 = 136
 
             // grab the Bonus Text and change the type (and total)
-            let bonusTypeText = vars.containers.getByName('gamePlayingUI').getByName('bonusTypeText');
+            let bonusTypeText = vars.containers.getByName('bonusPoints').getByName('bonusTypeText');
             bonusTypeText.setText(`BONUS POINTS FOR SCORE\n${uPD.scorePoints}`); // first unlock points will ALWAYS be for SCORE
 
 
@@ -2007,7 +2069,7 @@ var vars = {
         mainScreen: {
             getRandomPoint: function (vec) {
                 let x; let y; let pixel;
-                let xyOffset = [205, 275];
+                let xyOffset = [205, 245];
                 do {
                     x = Phaser.Math.Between(0, vars.mainScreen.width-1);
                     y = Phaser.Math.Between(0, vars.mainScreen.height-1);
@@ -2266,11 +2328,8 @@ var vars = {
                 blendMode: 1,
                 emitZone: { type: 'random', source: vars.phaserObject.mainScreen }
             });
-
-            if (vars.isPhone) {
-                vars.particles.available.letterSparkle.pause();
-                vars.particles.available.letterSparkle.emitters.list[0].killAll();
-            };
+            pV.available.letterSparkle.pause();
+            pV.available.letterSparkle.emitters.list[0].killAll();
         },
 
 
@@ -2497,6 +2556,7 @@ var vars = {
             let cC = consts.canvas;
             let uiFS = consts.fontSizes.gameScreen; // UI Font Size
             let container = scene.groups.gamePlayingUI;
+            let bonusPointsContainer = scene.containers.bonusPoints;
             let depth = consts.depths.gameScreen;
 
             let bg = scene.add.image(cC.cX, cC.cY, 'gameBG').setName('game_bg').setTint(vars.gameScreen.tint).setDepth(depth-1);
@@ -2514,7 +2574,7 @@ var vars = {
             // we dont really do anything with the variable but im keeping it in case I dont need to do something to it
             let foreGround = scene.add.image(cC.cX, cC.cY, 'whitePixel').setName('game_fg').setScale(cC.width, cC.height).setTint(0).setDepth(consts.depths.foreground).setInteractive();
             let bonusTypeText  = scene.add.bitmapText(cC.cX, cC.height*0.6, 'defaultFont', 'BONUS POINTS FOR SCORE\n0', 78,1).setDropShadow(8,8).setName('bonusTypeText').setTint(orange).setOrigin(0.5).setDepth(depth+2).setAlpha(0).setVisible(false);
-            container.add(bonusTypeText);
+            bonusPointsContainer.add(bonusTypeText);
 
 
             // non button stuff
@@ -2522,9 +2582,9 @@ var vars = {
             let timerText = scene.add.bitmapText(cC.width-20, 60, 'defaultFont', '0.0s - TIME', 48).setOrigin(1,0).setName('timerText').setDepth(depth);
 
             let x = cC.cX-180; let y = cC.height-160;
-            let multiplierBG = scene.add.image(x, y, 'ui', 'bonusCoinBG').setName('bonusBG').setOrigin(0.5, 1).setDepth(1);
-            let multiplierFG = scene.add.image(x, y-8, 'ui', 'bonusCoinFG').setName('bonusFG').setOrigin(0.5, 1).setDepth(1);
-            let bonusText = scene.add.bitmapText(x, y+30, 'defaultFontSmall', 'Bonus\nMultiplier', 18,1).setName('bMText').setOrigin(0.5).setDepth(1);
+            let multiplierBG = scene.add.image(x, y, 'ui', 'bonusCoinBG').setName('bonusBG').setOrigin(0.5,1).setDepth(depth);
+            let multiplierFG = scene.add.image(x, y-8, 'ui', 'bonusCoinFG').setName('bonusFG').setOrigin(0.5,1).setDepth(depth);
+            let bonusText = scene.add.bitmapText(x, y+30, 'defaultFontSmall', 'Bonus\nMultiplier', 18,1).setName('bMText').setOrigin(0.5).setDepth(depth);
             container.add([multiplierBG,multiplierFG,bonusText]);
             vars.UI.updateMultiplier();
 
@@ -2575,6 +2635,7 @@ var vars = {
             let container = scene.containers.mainScreen;
 
             let depth = consts.depths.mainScreen;
+            let unlocked = vars.localStorage.unlocked;
             let bg = scene.add.image(cC.cX, cC.cY, 'mainScreen', 'background').setAlpha(1).setDepth(depth-3);
             container.add(bg);
             // start the card suit particles
@@ -2582,34 +2643,63 @@ var vars = {
 
             let suitsP = vars.particles.available.heartShape;
             container.add(suitsP);
-
-            let welcomeText = scene.add.image(cC.width*0.25, cC.cY, 'mainScreen', 'welcomeText').setTint(0xFFCC00).setName('welcomeText').setAlpha(0).setDepth(depth);
-            let versionTxt = `VERSION: ${vars.version.toString()}${vars.version<0.8 ? String.fromCharCode(945) : vars.version<1 ? String.fromCharCode(946) : ''} ${vars.revision}`;
-            let versionText = scene.add.text(cC.width*0.25, cC.height *0.8,versionTxt, {fontSize: '24px'}).setTint(0x0).setOrigin(0.5).setName('versionText').setAlpha(1).setDepth(depth);
-
-
+            
+            let welcomeText = scene.add.image(cC.width*0.25, cC.cY, 'mainScreen', 'welcomeText').setTint(0xFFCC00).setName('welcomeText').setAlpha(0).setDepth(depth).setData({moving:true}); // the data is used to enable the sparkles
+            let welcomeTextTweenDuration = 1000;
+            let welcomeTextFadeTweenDuration = 500;
+            // fade in welcome image
             scene.tweens.add({
                 targets: welcomeText,
                 alpha: 1,
-                duration: 1000,
+                duration: welcomeTextFadeTweenDuration,
                 onComplete: (_t,_o)=> {
                     // fade everything else in and start the loop timer
                     vars.containers.ignoreLoop=false;
                     let objects = vars.UI.tempUIObjects;
                     vars.UI.tempUIObjects = null;
-                    scene.tweens.add({
-                        targets: objects,
-                        alpha: 1,
-                        duration: 500
-                    });
+                    scene.tweens.add({ targets: objects, alpha: 1, duration: 500 });
                 }
             });
+            // move the welcome image up
+            scene.tweens.add({
+                targets: welcomeText,
+                y: welcomeText.y -30,
+                delay: welcomeTextFadeTweenDuration,
+                duration: welcomeTextTweenDuration,
+                onComplete: (_t,_o)=> {
+                    !vars.isPhone ? pV.available.letterSparkle.resume() : null;
+                    vars.anims.startMainScreenUP(); // start the unlock points animation
+                }
+            });
+            let versionTxt = `VERSION: ${vars.version.toString()}${vars.version<0.8 ? String.fromCharCode(945) : vars.version<1 ? String.fromCharCode(946) : ''} ${vars.revision}`;
+            let versionText = scene.add.text(cC.width*0.25, cC.height *0.8,versionTxt, {fontSize: '24px'}).setTint(0x0).setOrigin(0.5).setName('versionText').setAlpha(1).setDepth(depth);
+
+            // the more info button is available on several pages
+            let moreInfoIcon = scene.add.image(cC.width*0.25, cC.height*0.875, 'ui', 'moreInfoIcon').setName('MS_moreInfoButton').setAlpha(0).setDepth(depth).setInteractive();
+            container.add(moreInfoIcon);
+            vars.UI.tempUIObjects.push(moreInfoIcon);
+
+            // move the version text and more info icon down
+            scene.tweens.add({
+                targets: [versionText,moreInfoIcon],
+                y: "+=50",
+                duration: welcomeTextTweenDuration
+            });
+
+            
+
+            let upCount = scene.add.bitmapText(650, cC.height*0.775, 'defaultFont', `0 Unlock Points`,48).setOrigin(1,0.5).setName(`playersUPCountMainScreen`).setTint(0xFFBC00).setAlpha(0).setDropShadow(4,4);
+            // upCount is increased to current points using a tween counter (called after anim.startMainScreenUp which animates the UP coin image and UP count text object)
+
+
+            
             let rightSide = scene.add.image(cC.width*0.75, cC.cY, 'mainScreen', 'rightSide').setAlpha(0).setDepth(depth-2);
             vars.UI.tempUIObjects.push(rightSide);
             container.add([welcomeText, rightSide]);
 
             let y = cC.cY-50;
             let buttons = ['newGame','hiScores','options', 'buy'];
+            unlocked ? buttons.pop() : null;
             buttons.forEach((_key)=> {
                 let buttonBG = scene.add.image(cC.width*0.75, y, 'mainScreen', 'buttonBG').setName(`MS_${_key}`).setAlpha(0).setDepth(depth-1).setInteractive();
                 vars.UI.tempUIObjects.push(buttonBG);
@@ -2619,14 +2709,13 @@ var vars = {
                 container.add([buttonBG,buttonText]);
                 y+=buttonBG.height+10;
             });
+            
+            let coinImage = scene.add.image(cC.width*0.25, cC.height*0.775,'coins','gold').setName('UIUPCoinMainScreen').setAlpha(0);
 
             pV.available.letterSparkle.setDepth(depth+1);
-            container.add([versionText,pV.available.letterSparkle]);
+            container.add([versionText,pV.available.letterSparkle,upCount,coinImage]);
 
-            // the more info button is available on several pages, so it isnt part of the mainScreen atlas
-            let moreInfoIcon = scene.add.image(cC.width*0.25, cC.height*0.9, 'ui', 'moreInfoIcon').setName('MS_moreInfoButton').setAlpha(0).setDepth(depth).setInteractive();
-            container.add(moreInfoIcon);
-            vars.UI.tempUIObjects.push(moreInfoIcon);
+
             vars.containers.current='mainScreen';
 
             if (vars.localStorage.dailyBonusGiven) { // the daily bonus for logging in was given, show a pop up
@@ -2912,17 +3001,20 @@ var vars = {
         increaseUPCount: ()=> { // first time entering here the _type is "score"
             let gV = vars.game;
             let uPD = gV.unlockPointData;
+            let bonusContainer = vars.containers.getByName('bonusPoints');
+            bonusContainer.setAlpha(1).setVisible(true); // show bonus container
 
             let _type;
             if (JSON.stringify(uPD.scoreCoins)!=='[0,0]') { // score coins still exist
+                bonusContainer.getByName('bonusTypeText').setAlpha(1).setVisible(true);
                 _type='score';
             } else if (JSON.stringify(uPD.timeCoins)!='[0,0]') { // time coins still exist
                 _type='time';
             } else { // all score AND time coins counted. This is the EXIT function!
                 // reset the UPData
                 gV.resetUPData();
-                // hide the  bonusTypeText
-                vars.containers.getByName('gamePlayingUI').getByName('bonusTypeText').setAlpha(0).setVisible(false);
+                bonusContainer.setAlpha(0).setVisible(false); // hide the bonus container
+                bonusContainer.getByName('bonusTypeText').setAlpha(0).setVisible(false); // hide the  bonusTypeText
                 // update the ui's UP count (it updates a couple of things so we just call the function that updates them all, even though one is currently corrent)
                 vars.game.unlockables.updateUIUnlockPoints();
 
@@ -2946,13 +3038,10 @@ var vars = {
             let uiCoin = container.getByName('UIUPCoin');
 
             if (_type!=='score') { // grab the Bonus Text and change the type
-                container.getByName('bonusTypeText').setText(`BONUS POINTS FOR TIME\n${uPD.timePoints}`);
+                bonusContainer.getByName('bonusTypeText').setText(`BONUS POINTS FOR TIME\n${uPD.timePoints}`);
             } else { // type is score, ie this is the first time in here
-                let bTT = container.getByName('bonusTypeText');
+                let bTT = bonusContainer.getByName('bonusTypeText');
                 bTT.setAlpha(1).setVisible(true);
-                container.bringToTop(bTT);
-                // JUST REALISED THAT THIS WILL NOT BRING THE TEXT OBJECT ABOVE THE CARDS
-                // TODO!
             };
 
 
@@ -2962,13 +3051,14 @@ var vars = {
             let startXY = [consts.canvas.cX, consts.canvas.cY];
             let endXY = [uiCoin.x, uiCoin.y];
 
+            let bC = vars.containers.getByName('bonusPoints');
             coins.forEach((_cC,_cI)=> {
                 for (let c=0; c<_cC; c++) {
                     // add the coin image to the screen
                     let coinFrame = !_cI ? 'silver' : 'bronze'; // with this, we can show the coin being added
                     let depth = consts.depths[`coins_${coinFrame}`];
                     let coinObject = scene.add.image(startXY[0],startXY[1],'coins',coinFrame).setAlpha(0).setDepth(depth);
-
+                    bC.add(coinObject);
                     let coinPoints = coinWorth[_cI];
                     
                     let thisDelay = c*delay;
@@ -2981,7 +3071,7 @@ var vars = {
                         delay: thisDelay+bronzeDelay,
                         duration: duration/3, // duration is 750/3 = 250ms
                         onStart: ()=> {
-                            let bText = vars.containers.getByName('gamePlayingUI').getByName('bonusTypeText');
+                            let bText = vars.containers.getByName('bonusPoints').getByName('bonusTypeText');
                             let txt = bText.text.split('\n'); // split the text line
                             let points = ~~txt[1]; // set points to array[1]
                             txt[1]=points-coinPoints; // update the array with the new UP count
