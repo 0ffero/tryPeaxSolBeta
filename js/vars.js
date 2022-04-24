@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 066.007',
+    revision: 'rev 072.007',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -66,6 +66,8 @@ var vars = {
         'Revision 062   - Added button list to all screens, which will be used to navigate said pages',
         'Revision 063 - 065 - Added the ability to enter name via keyboard',
         'Revision 066   - Disabled input when moving from main screen to high score table whilst looping to stop weirdness when user has clicked on a main screen button as its fading out.',
+        'Revision 067, 068  - Modified UP counts on each page to show >99999 where applicable',
+        'Revision 069 - 072 - More changes to allow cusror movement on pages. Cursor now hides during screen transition. And auto selects the main button on the page.',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -639,13 +641,24 @@ var vars = {
             cV.ignoreLoop=true;
 
             // disable input
-            vars.input.enableInput(false);
+            let iV = vars.input;
+            iV.enableInput(false);
+
+            // deal with the cursor object
+            // is it currently visible?
+            if (iV.cursor.phaserObject.visible) {
+                iV.cursor.phaserObject.setData({ wasVisible: true });
+            } else { // no
+                iV.cursor.phaserObject.setData({ wasVisible: false });
+            };
+            iV.cursor.quickShow(false);
+
             scene.tweens.add({ // fade out the currently visible container
                 targets: currentContainer,
                 alpha: 0,
                 duration: 1000,
                 onComplete: (_t,_o)=> {
-                    if (!vars.containers.looping) { return false; }; // make sure the game hasnt started between fades
+                    if (!vars.containers.looping) { return false; }; // make sure the game hasnt started between fades - no longer needed as I disable input when transitioning TODO ?
 
                     _o[0].setVisible(false); // set the old container to invisible (alpha is already 0)
 
@@ -669,6 +682,10 @@ var vars = {
                             vars.containers.current = vars.containers.waitingToPlayLoop.slice(-1)[0];
                             // re-enable input
                             vars.input.enableInput(true);
+                            if (vars.input.cursor.phaserObject.getData('wasVisible')) {
+                                vars.input.cursor.quickShow(true);
+                                vars.input.cursor.moveToPageButton();
+                            };
                         }
                     })
                 }
@@ -1196,10 +1213,13 @@ var vars = {
             // player has UP coins, start the count up
             scene.tweens.addCounter({
                 from: 0, to: unlockPoints,
-                duration: 2000,
+                duration: 2500,
+                ease: 'Quad.easeIn',
                 // update the UP count
                 onUpdate: (_t,_v)=> {
-                    scene.containers.mainScreen.getByName(`playersUPCountMainScreen`).setText(`${~~_v.value} Unlock Points`);
+                    let currentCount = ~~_v.value;
+                    if (~~_v.value>100000) { currentCount = '>99999'; };
+                    scene.containers.mainScreen.getByName(`playersUPCountMainScreen`).setText(`${currentCount} Unlock Points`);
                 }
             });
         },
@@ -1218,7 +1238,7 @@ var vars = {
 
                     // tween 2  - move to the correct X position
                     scene.tweens.add({
-                        targets: _o, x: _o.x-270,
+                        targets: _o, x: _o.x-300,
                         duration: 500, delay: 500 // fade in time
                     });
                 } else if (_o.name.includes('Count')) {
@@ -1227,7 +1247,7 @@ var vars = {
 
                     // tween 2  - move to the correct X position
                     scene.tweens.add({
-                        targets: _o, x: _o.x+90,
+                        targets: _o, x: _o.x+120,
                         duration: 500, delay: 1500, // fade in and move time for the coin image
                         onComplete: (_t,_o)=> { vars.anims.mainPageUPCount(); }
                     });
@@ -1598,12 +1618,13 @@ var vars = {
         pageButtons: {}, // each page on creation will add its buttons here. Used by KB to nav pages
 
         cursor: {
+            // NOTE: the AI class creates the actual object as it was originally only used there
             timeout: null, // auto hides the cursor after 5 seconds (as this will also be available on phones)
             timeoutMax: null,
             lastX: 0, lastY: 0, // updated in this.updatePointer
             currentX: 0, currentY: 0, // updated in update fn
             offsets: { x: null, y: null },
-            phaserObject: null,
+            phaserObject: null, // create by the AI class
 
             cachedFaceUps: [],// holds the current face up cards
             previousObjectOver: null, // when player presses DOWN key to go to "cards left" then UP, cursor should be over the lasy highlighted card
@@ -1676,7 +1697,7 @@ var vars = {
                 return true;
             },
 
-            getCurrentlyOnTop: ()=> { // returns the container
+            getCurrentlyOnTop: ()=> { // returns the container's NAME
                 let iV = vars.input;
                 let c = iV.cursor;
                 
@@ -1823,29 +1844,72 @@ var vars = {
                     break;
                 }
             },
+
+            moveToPageButton() {
+                let pointerOffsetXY = [25,40];
+                let onTop = vars.input.cursor.getCurrentlyOnTop();
+                // (needed when moving to a new button) let allButtons = vars.input.pageButtons[onTop];
+                let c = vars.input.cursor;
+                let phaserObject = c.phaserObject;
+                if (!phaserObject.getData('over')) {
+                    console.log(`Cursor isnt currently over any buttons\nFinding out what the default button is for this page`);
+                    let defaultButton = consts.pageButtons[onTop];
+                
+                    // ok, find that button
+                    let container = vars.containers.getByName(onTop);
+                    if (!container) return 'Cant find container';
             
-            quickShow: (_show=true)=> { // quickly switche between alpha 1 and 0 (and 0 to 1)
+                    console.log(`Looking for button with name: ${defaultButton}`);
+                    let button = container.getByName(defaultButton);
+                    if (!button) return 'Cant find button';
+                
+                    // button was found
+                    phaserObject.setPosition(button.x+pointerOffsetXY[0], button.y+pointerOffsetXY[1]);
+                    phaserObject.setData({ over: defaultButton });
+
+                    return true;
+                };
+
+                // if we get here theres already an OVER
+                // first make sure the over is actually on this page
+                let over = phaserObject.getData('over');
+                if (!vars.input.pageButtons[onTop].includes(over)) { // button isnt on this screen, reset and re-request
+                    phaserObject.setData({ over: null });
+                    vars.input.cursor.moveToPageButton();
+                    return;
+                };
+            },
+            
+            quickShow: (_show=true)=> { // quickly switch between alpha 1 and 0 (and 0 to 1)
+                let phaserObject = vars.input.cursor.phaserObject;
                 let alpha = _show ? 1:0;
-                vars.input.cursor.phaserObject.setAlpha(alpha).setVisible(_show);
+                if (phaserObject.visible===_show && phaserObject.alpha===alpha) return false; // its already whatever was requested
+                phaserObject.setAlpha(alpha).setVisible(_show);
             },
             
             updatePointer: ()=> { // called from input.init
+                // ignored until the main screen is shown
                 let iV = vars.input;
+                if (!iV.pageButtons.mainScreen) return false;
+
                 let cursor = iV.cursor;
-                // CURSOR HAS MOVED!
-                if (cursor.lastX!==cursor.currentX || cursor.lastY!==cursor.currentY) {
+                if (cursor.lastX!==cursor.currentX || cursor.lastY!==cursor.currentY) { // CURSOR HAS MOVED
                     cursor.lastX = cursor.currentX; cursor.lastY = cursor.currentY; // update lastX and Y
                     cursor.timeout!==cursor.timeoutMax ? cursor.timeout=cursor.timeoutMax : null; // reset timeout
                     if (cursor.tween) { cursor.tween.remove(); iV.cursor.tween=null; }; //if a tween exists, remove it
-                    cursor.phaserObject.alpha!==1 ? cursor.phaserObject.alpha=1 : null; // quickly set the alpha to 1 if !1
-                    return false;
+                    if ((cursor.phaserObject.alpha!==1 || !cursor.phaserObject.visible) && iV.enabled) {
+                        cursor.tween ? cursor.tween.remove() : null;
+                        cursor.quickShow(true); // quickly set the alpha to 1 if !1
+                    };
+                    cursor.phaserObject.setData({ wasVisible: true });
+                    return;
                 };
                 if (!cursor.phaserObject.visible || iV.usingCursorKeys) return false; // ignore the function if the alpha is NOT 1 OR usingCursorKeys
 
 
                 // IF WE GET HERE THE CURSOR IS BEING CONTROLLED BY THE MOUSE (ie NOT cursor keys)
-                // CURSOR HASNT MOVED :( (and computer is very unhappy as it now has to do a thing)
-                if (cursor.timeout) { iV.cursor.timeout--; return false; }
+                // also, CURSOR HASNT MOVED
+                if (cursor.timeout) { iV.cursor.timeout--; return false; } // reduce timeout until 0
         
                 cursor.timeout = cursor.timeoutMax; // reset timeout
                 // hide the cursor (tween can be interrupted, so we cache it)
@@ -1853,7 +1917,7 @@ var vars = {
                     targets: vars.input.cursor.phaserObject,
                     alpha: 0,
                     duration: 2000,
-                    onComplete: ()=> { vars.input.cursor.tween=null; } // fade out has completed, nullify the tween var
+                    onComplete: (_t,_o)=> { vars.input.cursor.tween=null; _o[0].setData({ wasVisible: false }); } // fade out has completed, nullify the tween var
                 });
                 return 'Hiding mouse pointer';
             }
@@ -1884,9 +1948,38 @@ var vars = {
             !vars.isPhone && !scene.cursors ? scene.cursors = scene.input.keyboard.createCursorKeys() : null;
             if (scene.cursors) {
                 scene.input.keyboard.on('keyup', (_key)=> {
-                    if (!_key.key.includes('Arrow') && _key.code!=='Space') return false;
-                    let direction = _key.code==='Space' ? 'select' : _key.key.replace('Arrow','').toLowerCase();
-                    vars.DEBUG ? console.log(`%c🖮 Attempting to move cursor ${direction} or click card`, `color: black; background-color: #50FF50`) : null;
+                    // VOLUME keys
+                    if (_key.key==='=' || _key.key==='-') {
+                        switch (_key.key) {
+                            case '=': vars.audio.volumeChange(true); break; // volume UP
+                            case '-': vars.audio.volumeChange(false); break; // volume DOWN
+                        };
+                        _key.stopPropagation();
+                        return true;
+                    };
+
+                    // MUSIC TRACK keys (1-6) - Enable or disable track
+                    if (_key.keyCode>=49 && _key.keyCode<=54) {
+                        let trackInt = ~~(_key.key);
+                        vars.UI.swapMusicEnableButton(trackInt);
+                        _key.stopPropagation();
+                        return true;
+                    };
+
+                    // ARROW KEYS and SPACE/ENTER
+                    // first: the only keys we are interested in beyond this point is arrows, space/enter & esc
+                    let allowed = ['Space','Enter','Escape'];
+                    if (!_key.key.includes('Arrow') && !allowed.includes(_key.key)) return false;
+
+                    // if we get here, we do indeed have an Arrow, Space/Enter or Esc up event
+                    let key = _key.key;
+                    if (key==='Escape') { // ESCAPE key is used to close several containers (HS,NG - both, gS)
+
+                        return true;
+                    };
+                    let direction = key==='Space' || key==='Enter' ? 'select' : key.replace('Arrow','').toLowerCase();
+                    let msg = direction==='select' ? `Clicking on button` : `Moving cursor ${direction}`;
+                    vars.DEBUG ? console.log(`%c🖮 ${msg}`, `color: black; background-color: #50FF50`) : null;
                     vars.input.cursor.keyboardMove(direction);
                 });
             }
@@ -1897,14 +1990,17 @@ var vars = {
                 let c = iV.cursor;
                 let cOff = consts.cursorOffsets;
                 // get mouse pointer image and set its position
-                c.phaserObject.setPosition(pointer.x+cOff.x, pointer.y+cOff.y);
+                c.phaserObject.setPosition(~~pointer.x+cOff.x, ~~pointer.y+cOff.y);
 
-                // update the faders vars
-                iV.cursor.currentX = ~~pointer.x;
-                iV.cursor.currentY = ~~pointer.y;
+                if (iV.cursor.currentX!==~~pointer.x || iV.cursor.currentY!==~~pointer.y) {
+                    iV.cursor.currentX = ~~pointer.x;
+                    iV.cursor.currentY = ~~pointer.y;
+                    c.updatePointer();
+                };
                 
                 if (iV.usingCursorKeys) return false; // if the player is using cursor keys ignore the next function
                 
+                // update the faders vars
                 //c.updatePointer();
             });
 
@@ -2993,7 +3089,7 @@ var vars = {
             vars.UI.updateMultiplier();
 
             // UNLOCK POINTS
-            let unlockPoints = vars.game.unlockPoints;
+            let unlockPoints = vars.game.unlockPoints>99999 ? '>99999' : vars.game.unlockPoints;
             let upCount = scene.add.bitmapText(cC.width-110, 0+150, 'defaultFont', unlockPoints, 48).setOrigin(1,0.5).setName(`playersUPCount`).setTint(0xFFBC00);
             let coinImage = scene.add.image(cC.width-55, 0+150,'coins','gold').setName('UIUPCoin');
             container.add([upCount, coinImage]);
@@ -3098,7 +3194,7 @@ var vars = {
 
             
 
-            let upCount = scene.add.bitmapText(650, cC.height*0.775, 'defaultFont', `0 Unlock Points`,48).setOrigin(1,0.5).setName(`playersUPCountMainScreen`).setTint(0xFFBC00).setAlpha(0).setDropShadow(4,4);
+            let upCount = scene.add.bitmapText(650, cC.height*0.775, 'defaultFont', `0 Unlock Points`,48).setLetterSpacing(4).setOrigin(1,0.5).setName(`playersUPCountMainScreen`).setTint(0xFFBC00).setAlpha(0).setDropShadow(4,4);
             // upCount is increased to current points using a tween counter (called after anim.startMainScreenUp which animates the UP coin image and UP count text object)
 
 
@@ -3216,7 +3312,8 @@ var vars = {
             unlockSwapButton.on('pointerup', vars.input.switchVisibleUnlocksContainer);
             let unlockablesHeader = scene.add.image(865,155,'ui','unlockablesHeader').setName('unlockablesHeader').setOrigin(0,0.5).setInteractive();
             unlockablesHeader.on('pointerup', vars.input.switchVisibleUnlocksContainer);
-            let unlockPoints = vars.game.unlockPoints;
+
+            let unlockPoints = vars.game.unlockPoints>99999 ? '>99999' : vars.game.unlockPoints;
             let upCount = scene.add.bitmapText(cC.width-245, 155, 'defaultFont', unlockPoints, 48).setOrigin(1,0.5).setName(`optionsScreenUPCount`).setTint(0xFFBC00);
             let coinImage = scene.add.image(cC.width-205, 155,'coins','gold').setName('UIOUPCoin').setScale(0.75);
 
@@ -3713,7 +3810,7 @@ var vars = {
             })
         },
 
-        swapMusicEnableButton: (_trackInt,_allRequest=false)=> {
+        swapMusicEnableButton: (_trackInt,_allRequest=false)=> { // changes a track from ON to OFF and vice versa
             let container = vars.containers.getByName('optionsScreen');
             let off = container.getByName(`options_track${_trackInt}_off`);
             let on = container.getByName(`options_track${_trackInt}_on`);

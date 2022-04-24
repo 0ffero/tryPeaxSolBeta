@@ -874,6 +874,7 @@ let Unlockables = class {
 
     updateUIUnlockPoints() {
         let UPs = vars.game.unlockPoints;
+        UPs>99999 ? UPs='>99999' : null;
         vars.containers.getByName('optionsScreen').getByName(`optionsScreenUPCount`).setText(UPs);
         vars.containers.getByName('gamePlayingUI').getByName(`playersUPCount`).setText(UPs);
         vars.containers.getByName('mainScreen').getByName(`playersUPCountMainScreen`).setText(`${UPs} Unlock Points`);

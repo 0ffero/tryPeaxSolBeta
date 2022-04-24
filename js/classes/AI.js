@@ -33,7 +33,7 @@ let AI = class {
     }
 
     init() {
-        this.finger = scene.add.image(consts.canvas.cX+30, consts.canvas.height*0.9, 'ui', 'aiFingerMoving').setDepth(consts.depths.aiFinger).setAlpha(0).setData({ container: null, card: null });
+        this.finger = scene.add.image(consts.canvas.cX+30, consts.canvas.height*0.9, 'ui', 'aiFingerMoving').setDepth(consts.depths.aiFinger).setAlpha(0).setData({ wasVisible: false, container: null, card: null });
         scene.tweens.add({
             targets: this.finger,
             alpha: 1,
