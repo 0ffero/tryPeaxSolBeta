@@ -15,6 +15,9 @@ vars.update = {
             vars.update.updateMainScreenButtons();
         };
 
+        // MAIN CURSOR
+        vars.input.cursor.updatePointer();
+
         let cV = vars.containers;
         // make sure if we show the main screen and looping is false to enable looping
         !cV.looping && scene.containers.mainScreen.alpha===1 ? cV.looping=true : null;
@@ -73,45 +76,7 @@ vars.update = {
 
 
             // SWITCH SCREENS
-
-            // GET THE CURRENT CONTAINER NAME (itll be the last in the array)
-            let currentContainer = cV.waitingToPlayLoop.slice(-1)[0];
-            currentContainer = cV.getByName(currentContainer);
-            currentContainer.name==='mainScreen' ? vars.particles.suitShapeDisableAll() : vars.particles.cardSuitsEnabled=true;
-
-            cV.ignoreLoop=true;
-
-            scene.tweens.add({ // fade out the currently visible container
-                targets: currentContainer,
-                alpha: 0,
-                duration: 1000,
-                onComplete: (_t,_o)=> {
-                    if (!vars.containers.looping) { return false; }; // make sure the game hasnt started between fades
-
-                    _o[0].setVisible(false); // set the old container to invisible (alpha is already 0)
-
-                    // GET THE NEXT CONTAINER TO FADE IN
-                    let cV = vars.containers;
-                    let newContainer = cV.waitingToPlayLoop.shift(); // grab the first available container
-                    cV.waitingToPlayLoop.push(newContainer); // push it back onto the array
-                    if (cV.pausedByUser) { return false; }
-                    
-                    // the loop hasnt being ignored
-                    // grab the actual container
-                    newContainer = cV.getByName(newContainer);
-                    // set it to visible BUT alpha 0
-                    newContainer.setVisible(true).setAlpha(0);
-                    scene.tweens.add({ // fade it in
-                        targets: newContainer,
-                        alpha: 1,
-                        duration: 1000,
-                        onComplete: (_t,_o)=> {
-                            vars.containers.ignoreLoop=false;
-                            vars.containers.current = vars.containers.waitingToPlayLoop.slice(-1)[0];
-                        }
-                    })
-                }
-            });
+            cV.transitionToNewScreen(cV);
         };
     },
 

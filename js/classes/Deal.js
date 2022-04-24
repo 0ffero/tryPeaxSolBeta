@@ -270,7 +270,15 @@ let Deal = class {
 
         // update the score and streak
         deck.increaseScore(x,y);
-        // and update the card enables var (SHOW CARD UNDERNEATH IF APPROPRIATE)
+
+        // BONUS ?
+        // check if bonus should be given
+        if (this.checkUpperRowForBonus(position)) {
+            deck.increaseScore(null, null, 500);
+        };
+
+
+        // If a card was turned, check if we should show any card under it
         let found=false;
         for (let setIndex in this.cardEnables) {
             let set = this.cardEnables[setIndex];
@@ -278,36 +286,40 @@ let Deal = class {
                 set.forEach((_p,_i)=> {
                     if (_p===position) { found=_i; };
                 });
-
+                
+                // and update the card enables var
                 this.cardEnables[setIndex].splice(found,1);
 
+                // SHOW CARD UNDERNEATH IF APPROPRIATE
                 if (this.cardEnables[setIndex].length===0) { // no more cards in this enables
                     // show card below this pair
                     this.unhideCard(~~setIndex);
-                }
-            }
-        }
+                };
+            };
+        };
 
 
-        // check if bonus should be given
-        if (this.checkUpperRowForBonus(position)) {
-            deck.increaseScore(null, null, 500);
-        }
 
+        // AFTER HERE ALL BONUS' ETC HAVE BEEN GIVEN
+        // ALL WE'RE DOING NOW IS CHECKING FOR WIN OR LOSS
 
+        // FINAL DEALT CARD?
         // check if this was the final card from the dealt container
-        if (!scene.groups.cardsDealt.length) {
+        if (!scene.groups.cardsDealt.length) { // player has WON
             this.gameWinLose(true);
             return true;
-        }
+        };
 
+        // ANY MOVES LEFT?
         // check if there are more moves available
-        if (!this.checkIfAnyMoreMovesAreAvailable()) {
+        if (!this.checkIfAnyMoreMovesAreAvailable()) { // player has LOST
             this.gameWinLose(false);
             return false;
-        }
+        };
 
-
+        // MORE MOVES AVAILABLE?
+        // if we get here, there are cards available. Respond saying that the move was valid
+        return true;
     }
 
     checkIfAnyMoreMovesAreAvailable() {
@@ -336,11 +348,13 @@ let Deal = class {
         return false;
     }
 
-    clickOnCard(_card) {
+    clickOnCard(_card) { // called by a mouse click/touch event (as opposed to keyboard)
         if (!this.startTime) this.startTime = new Date();
 
         let row = _card.getData('row');
         if (!row) return false;
+
+        vars.input.cursor.cachedFaceUps=[];
 
         if (row===5) { // special case - this is one of the remaining cards
             this.showNextRemainingCard(_card);
@@ -387,6 +401,24 @@ let Deal = class {
                 duration: framesToMs(2)
             })
         });
+    }
+
+    getAllFaceUpCards(_returnAll=true) {
+        let visibleCards = [];
+        let c = scene.groups.cardsDealt;
+        c.list.forEach((_c)=> {
+            if (_c.getData('faceUp')) {
+                visibleCards.push({ name: _c.name, x: _c.x, y: _c.y});
+            };
+        });
+        arraySortByKey(visibleCards,'x');
+
+        // cache the visible cards (used by keyboard input)
+        vars.input.cursor.cachedFaceUps = visibleCards;
+
+        // return with the requested set (1 or all)
+        let returnVar = _returnAll ? visibleCards : visibleCards[0];
+        return returnVar;
     }
 
     getLowHigh() {
@@ -443,7 +475,9 @@ let Deal = class {
             this.gameLose();
         };
 
-        // this runs on wins and losses
+
+        // everything below here runs on wins and losses
+        vars.game.deck.resetStreak();
         // update the player stats
         this.saveSolution(_win);
         this.updatePlayerStats();
@@ -518,7 +552,7 @@ let Deal = class {
         _card.setDepth(3).setAlpha(0);
         let duration = 500;
         if (!pos) { pos = [_card.x,_card.y]; duration = 100; };
-        let cardNumber = _card.data.list['position'];
+        //let cardNumber = _card.data.list['position'];
         scene.tweens.add({
             targets: _card,
             x: pos[0], y: pos[1], alpha: 1,
@@ -533,6 +567,9 @@ let Deal = class {
                     this.allCardsDealt=true; // let the ai know the cards have been dealt
                     // re-enable input
                     vars.input.enableInput(true);
+                    
+                    // cache the face up cards
+                    vars.game.deal.getAllFaceUpCards();
                 };
             }
         });
@@ -577,10 +614,8 @@ let Deal = class {
         let card=null;
         scene.groups.cardsDealt.list.forEach((_c)=> {
             if (!card) {
-                if (_c.getData('position')===_position) {
-                    card=_c;
-                }
-            }
+                if (_c.getData('position')===_position) { card=_c; };
+            };
         });
         let frame = card.name.replace('card_','');
         card.setFrame(frame).setData('faceUp', true).setInteractive();

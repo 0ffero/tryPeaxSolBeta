@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 052.006',
+    revision: 'rev 066.007',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -62,10 +62,15 @@ var vars = {
         'Revision 047   - Coins werent in a container (they just had a depth of 1 - The reason for this was to have the coins above the gameplayui) so now theyre in the same bonus container as 046',
         'Revision 048 - 051 - Modified the mainScreen so it shows the current UP count for the player',
         'Revision 052   - Fixed debug overlay',
+        'Revision 053 - 061 - Adding keyboard movement to the game. Implemented game ui control',
+        'Revision 062   - Added button list to all screens, which will be used to navigate said pages',
+        'Revision 063 - 065 - Added the ability to enter name via keyboard',
+        'Revision 066   - Disabled input when moving from main screen to high score table whilst looping to stop weirdness when user has clicked on a main screen button as its fading out.',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
         'Revision 002 - 006 - Replaced the splashScreen for phones only. (changes to rotators and particles).',
+        'Revision 007   - Reduced the render resolution of the particles shader for PCs to 1/3',
 
         'FUTURE REVISIONS:',
         'Unlockable tints work. Unlockable cards, not so much.'
@@ -86,15 +91,32 @@ var vars = {
             dV.overlayObject = scene.add.text(cC.width-10,cC.height-120, [],{ fontSize: '18px', fontWeight: 'bold', lineSpacing: 7 }).setOrigin(1).setData({wh:[0,0]}).setDepth(999).setVisible(false);
             dV.updateOverlay();
 
-            scene.cursors = scene.input.keyboard.createCursorKeys();
+            !scene.cursors ? scene.cursors = scene.input.keyboard.createCursorKeys() : null;
             scene.input.keyboard.on('keydown-DELETE', (_e)=> {
                 _e.stopPropagation();
                 vars.debug.switchOverlayVisibility();
             });
         },
 
+        checkAllCards: ()=> { // shows a virtual representation of all cards dealt (as I once noticed while debugging that 2 cards were the same (AD), but it may just be phaser acting weird as Ive never seen it again)
+            let cards = { C: [], D: [], H: [], S: [] };
+            let groups = scene.groups;
+            ['cardsDealt','cardsLeft','cardCurrent'].forEach((_g)=> {
+                groups[_g].list.forEach((_c)=> {
+                    let cName = _c.name;
+                    a = cName[cName.length-1]
+                    cards[a].push(cName);
+                    cards[a].sort();
+                });
+            });
+            console.table(cards);
+        },
+
         move: ()=> {
+            return false;
             let dV = vars.debug;
+            if (!dV.overlayBG.visible) return false;
+
             let xy = [0,0];
             if (scene.cursors.left.isDown) { xy[0] = -50; } else if (scene.cursors.right.isDown) { xy[0] = 50; };
             if (scene.cursors.up.isDown) { xy[1] = -50; } else if (scene.cursors.down.isDown) { xy[1] = 50; };
@@ -114,6 +136,8 @@ var vars = {
 
         update: ()=> {
             let dV = vars.debug;
+            if (dV.delay===null) return false;
+
             if (dV.delay) { dV.delay--; return false; }
             dV.delay!==null && !dV.overlayObject ? dV.overlayInit() : null;
             if (!dV.overlayBG || !dV.overlayBG.visible || dV.delay===null) return false;
@@ -145,7 +169,15 @@ var vars = {
             });
             particleArray.push('');
 
-            let othersArray = ['','OTHERS','INPUT', `Enabled: ${vars.input.enabled}`];
+            let othersArray = [ '', 'OTHERS', 'INPUT', `Enabled: ${vars.input.enabled}`, '' ];
+
+            if (vars.game.deal) {
+                let iV = vars.input; let c = iV.cursor;
+                let faceUps = JSON.stringify(c.cachedFaceUps).split('{');
+                faceUps.shift();
+                othersArray.push(`Cursor Over: ${c.phaserObject.data.list.over}`,`Previously Over: ${c.previousObjectOver}`);
+                othersArray = [...othersArray,...faceUps];//`Cached ${faceUps}`
+            };
 
             let fullArray = [...header, ...particleArray, ...containerArray,...statArray,...othersArray];
 
@@ -595,6 +627,52 @@ var vars = {
                 }
             });
             return true;
+        },
+
+        transitionToNewScreen: (_cV)=> {
+            let cV = _cV;
+            // GET THE CURRENT CONTAINER NAME (itll be the last in the array)
+            let currentContainer = cV.waitingToPlayLoop.slice(-1)[0];
+            currentContainer = cV.getByName(currentContainer);
+            currentContainer.name==='mainScreen' ? vars.particles.suitShapeDisableAll() : vars.particles.cardSuitsEnabled=true;
+
+            cV.ignoreLoop=true;
+
+            // disable input
+            vars.input.enableInput(false);
+            scene.tweens.add({ // fade out the currently visible container
+                targets: currentContainer,
+                alpha: 0,
+                duration: 1000,
+                onComplete: (_t,_o)=> {
+                    if (!vars.containers.looping) { return false; }; // make sure the game hasnt started between fades
+
+                    _o[0].setVisible(false); // set the old container to invisible (alpha is already 0)
+
+                    // GET THE NEXT CONTAINER TO FADE IN
+                    let cV = vars.containers;
+                    let newContainer = cV.waitingToPlayLoop.shift(); // grab the first available container
+                    cV.waitingToPlayLoop.push(newContainer); // push it back onto the array
+                    if (cV.pausedByUser) { return false; }
+                    
+                    // the loop hasnt being ignored
+                    // grab the actual container
+                    newContainer = cV.getByName(newContainer);
+                    // set it to visible BUT alpha 0
+                    newContainer.setVisible(true).setAlpha(0);
+                    scene.tweens.add({ // fade it in
+                        targets: newContainer,
+                        alpha: 1,
+                        duration: 1000,
+                        onComplete: (_t,_o)=> {
+                            vars.containers.ignoreLoop=false;
+                            vars.containers.current = vars.containers.waitingToPlayLoop.slice(-1)[0];
+                            // re-enable input
+                            vars.input.enableInput(true);
+                        }
+                    })
+                }
+            });
         }
     },
 
@@ -1516,9 +1594,319 @@ var vars = {
 
     input: {
         enabled: false,
+        usingCursorKeys: false,
+        pageButtons: {}, // each page on creation will add its buttons here. Used by KB to nav pages
+
+        cursor: {
+            timeout: null, // auto hides the cursor after 5 seconds (as this will also be available on phones)
+            timeoutMax: null,
+            lastX: 0, lastY: 0, // updated in this.updatePointer
+            currentX: 0, currentY: 0, // updated in update fn
+            offsets: { x: null, y: null },
+            phaserObject: null,
+
+            cachedFaceUps: [],// holds the current face up cards
+            previousObjectOver: null, // when player presses DOWN key to go to "cards left" then UP, cursor should be over the lasy highlighted card
+            tween: null, // this holds fade out tweens, so when we move the mouse again it can remove it easily then set alpha of cursor back to 1
+        
+            clickOnCardsLeft: ()=> {
+                let cardsLeft = scene.groups.cardsLeft.list
+                // look at the last card (this should be the interactive card)
+                let lookingFor = cardsLeft[cardsLeft.length-1].input && cardsLeft[cardsLeft.length-1].input.enabled ? cardsLeft[cardsLeft.length-1] : null;
+
+                // if the last card wasnt interactive
+                if (!lookingFor) { // the card that should be interactive is NOT, find it
+                    vars.DEBUG ? console.warn(`The card that should be interactive is NOT\nLooking for the interactive card...`) : null;
+                    cardsLeft.every((_a)=> {
+                        if (_a.input && _a.input.enabled) {
+                            vars.DEBUG ? console.log(`Found the next interactive card.\nApparently it was ${_a.name}!`) : null;
+                            lookingFor = _a;
+                            return true;
+                        };
+
+                        return true;
+                    });
+                };
+
+                // ok, if there was no interactive card, then input is generally NOT enabled (ie the player may have just won)
+                if (!lookingFor) { console.warn(`Unable to find an interactive card in cards left.\nYouve either completed the deck ot input is not enabled`); return false; }
+
+                // if we get here looking for is an actual card object
+                vars.DEBUG ? console.log(`Clicking on the next cards-left card (${lookingFor.name})`) : null;
+                vars.game.deal.showNextRemainingCard(lookingFor);
+            },
+
+            findTheNearestCardToTheClickedOnOne: (_cName,_delay=false)=> { // KEYBOARD: used when clicking on a
+                let cachedList = vars.input.cursor.cachedFaceUps;
+
+                if (cachedList.length===1) {
+                    if (!_delay) return "delay"; // normally I dont use double quotes, but this is a very special occassion
+                };
+
+                // if we get here we have more than 1 card visible
+                let cardData;
+                if (!_delay) {
+                    let currentCard=_cName;
+                    let left = null; let right = null;
+                    cachedList.every((_cL,_i)=> {
+                        if (_cL.name===currentCard) {
+                            right = _i+1 > cachedList.length-1 ? 0 : _i+1;
+                            left = _i-1 < 0 ? cachedList.length-1 : _i-1;
+                            return true;
+                        };
+                    
+                        return true;
+                    });
+                    
+                    // set cardData to the closest card
+                    cardData = !right ? cachedList[left] : cachedList[right];
+                } else {
+                    cardData = cachedList[0];
+                };
+
+                if (!vars.checkType(cardData.x,'number') || !vars.checkType(cardData.y,'number')) return false;
+
+                // everything looks good. Move the cursor
+                let cursorObject = vars.input.cursor.phaserObject;
+                let group = scene.groups.cardsDealt;
+                let cOff = consts.cursorOffsets;
+                let cOffset = [group.x+cOff.x, group.y+cOff.y];
+                cursorObject.setPosition(cardData.x+cOffset[0],cardData.y+cOffset[1]).setData({ over: cardData.name });
+
+                return true;
+            },
+
+            getCurrentlyOnTop: ()=> { // returns the container
+                let iV = vars.input;
+                let c = iV.cursor;
+                
+                let ignore = ['mainScreen'];
+                let topMostContainer = null;
+                let depthMax = 0;
+                if (Object.keys(iV.pageButtons).length>1) {
+                    for (let containerName in iV.pageButtons) {
+                        let container = vars.containers.getByName(containerName);
+                        if (!ignore.includes(containerName) && container.visible && container.depth>depthMax) {
+                            topMostContainer=containerName;
+                        };
+                    };
+                };
+
+                if (!topMostContainer) { return 'mainScreen'; } // if no top most, just assume mainScreen
+
+                return topMostContainer;
+            },
+
+            keyboardMove: (_dir=null)=> { // moves the cursor via CURSOR KEYS, called from v.input
+                if (!vars.game.deal || !_dir) return false;
+
+                // if direction is NOT 'select' (basically the click function when using the keyboard), check if usingCursors has been set to true
+                !vars.input.usingCursorKeys && ['up','down','left','right'].includes(_dir) ? vars.input.usingCursorKeys=true : null;
+                
+                let iV = vars.input;
+                let c = iV.cursor;
+                if (iV.usingCursorKeys && c.phaserObject.alpha!==1) {
+                    if (c.tween) { c.tween.remove(); iV.cursor.tween=null; }; // kill any tweens
+                    c.quickShow(true); // set alpha to 1
+                };
+                
+                vars.DEBUG ? console.log(` >> Moving cursor ${_dir}`) : null;
+
+                let cursorObject = c.phaserObject;
+                let cOff = consts.cursorOffsets;
+                let cOffset = [scene.groups.cardsDealt.x+cOff.x,scene.groups.cardsDealt.y+cOff.y];
+
+                switch (_dir) {
+                    case 'down':
+                        // move to cards left
+                        if (cursorObject.y!==cursorObject.getData('cardsLeftXY')) {
+                            // set the preObOver var
+                            iV.cursor.previousObjectOver = cursorObject.getData('over');
+
+                            // move cursor
+                            let xy = cursorObject.getData('cardsLeftXY');
+                            cursorObject.setPosition(xy.x,xy.y).setData({ over: 'cardsLeft'});
+                            return true;
+                        };
+                        return false;
+                    break;
+
+                    case 'up':
+                        // move on to the dealt cards
+                        if (c.previousObjectOver==='cardsLeft') c.previousObjectOver = null;
+
+                        if (c.previousObjectOver) { // we were previously over a card, move back there
+                            let object = scene.groups.cardsDealt.getByName(c.previousObjectOver);
+                            cursorObject.setPosition(object.x+cOffset[0],object.y+cOffset[1]).setData({ over: c.previousObjectOver });
+                            iV.cursor.previousObjectOver=null;
+                            return true;
+                        };
+
+                        // if we get here its the first time were moving to the dealt cards
+                        let cardData = vars.game.deal.getAllFaceUpCards(false); // get the left most card
+
+                        // move the cursor
+                        cursorObject.setPosition(cardData.x+cOffset[0],cardData.y+cOffset[1]).setData({ over: cardData.name });
+
+                        return true;
+                    break;
+
+                    case 'left': case 'right':
+                        // move left or right across dealt
+                        let lookingFor = cursorObject.getData('over');
+                        if (!lookingFor) { // there is no current "over" on cursorObject, simply re-request this function for "up"
+                            c.keyboardMove('up');
+                            return true;
+                        };
+
+                        if (lookingFor==='cardsLeft') { // cursor is currently over cards left
+                            lookingFor = c.previousObjectOver;
+                            c.keyboardMove('up');
+                            return true;
+                        };
+                        
+                        let nextCardData = null;
+                        let allCards = c.cachedFaceUps.length ? c.cachedFaceUps : c.getAllFaceUpCards(); // get all face up cards
+                        allCards.every((_c,_i)=> {
+                            if (_c.name===lookingFor) {
+                                if (_dir==='left') {
+                                    nextCardData = _i-1 < 0 ? allCards[allCards.length-1] : allCards[_i-1];
+                                } else if (_dir==='right') {
+                                    nextCardData = _i+1 > allCards.length-1 ? allCards[0] : allCards[_i+1];
+                                };
+
+                                return true;
+                            };
+                            return true;
+                        });
+
+                        if (!nextCardData) {
+                            console.error(`Unable to find the next cards data!`); // this should never fire, but, just in case
+                            return false;
+                        };
+
+                        // next card found, move cursor
+                        cursorObject.setPosition(nextCardData.x+cOffset[0], nextCardData.y+cOffset[1]).setData({ over: nextCardData.name });
+                    break;
+
+                    case 'select':
+                        let cName = cursorObject.getData('over');
+                        console.log(`Clicking on card with name ${cName}`);
+                        if (cName==='cardsLeft') { // player clicked on one of the cards left
+                            c.clickOnCardsLeft();
+                            return true;
+                        } else { // player clicked on a dealt card
+                            let gameObject = scene.groups.cardsDealt.getByName(cName);
+                            let valid = vars.game.deal.checkDealtCard(gameObject);
+                            console.log(`%cObject is ${valid ? 'valid' : 'not valid'}`, 'color: black; background-color: white');
+                            // especially on game win (as I changed a true to false!)
+                            if (!valid) return false;
+
+                            // if we get here the card was valid
+                            // MUST be done before updating the cachedFaceUps var
+                            let rs = c.findTheNearestCardToTheClickedOnOne(cName); // returns true, false or "delay"
+                            console.log(`%cResponse was ${ rs==='delay' ? 'delay' : !rs ? 'false' : 'true'}`, 'color: black; background-color: white');
+                            
+                            // update the cached list
+
+                            iV.cursor.cachedFaceUps = vars.game.deal.getAllFaceUpCards(); // update the face up cards list
+                            console.log(`%cFace ups were re-cached`, 'color: black; background-color: white');
+
+                            if (rs==='delay') {
+                                console.log(`%cRunning delayed findNearest`, 'color: #10ff10; background-color: black');
+                                c.findTheNearestCardToTheClickedOnOne(cName,true); // true is to tell this function that we delayed this call
+                            };
+                            return true;
+                        };
+
+                        return true;
+                    break;
+                }
+            },
+            
+            quickShow: (_show=true)=> { // quickly switche between alpha 1 and 0 (and 0 to 1)
+                let alpha = _show ? 1:0;
+                vars.input.cursor.phaserObject.setAlpha(alpha).setVisible(_show);
+            },
+            
+            updatePointer: ()=> { // called from input.init
+                let iV = vars.input;
+                let cursor = iV.cursor;
+                // CURSOR HAS MOVED!
+                if (cursor.lastX!==cursor.currentX || cursor.lastY!==cursor.currentY) {
+                    cursor.lastX = cursor.currentX; cursor.lastY = cursor.currentY; // update lastX and Y
+                    cursor.timeout!==cursor.timeoutMax ? cursor.timeout=cursor.timeoutMax : null; // reset timeout
+                    if (cursor.tween) { cursor.tween.remove(); iV.cursor.tween=null; }; //if a tween exists, remove it
+                    cursor.phaserObject.alpha!==1 ? cursor.phaserObject.alpha=1 : null; // quickly set the alpha to 1 if !1
+                    return false;
+                };
+                if (!cursor.phaserObject.visible || iV.usingCursorKeys) return false; // ignore the function if the alpha is NOT 1 OR usingCursorKeys
+
+
+                // IF WE GET HERE THE CURSOR IS BEING CONTROLLED BY THE MOUSE (ie NOT cursor keys)
+                // CURSOR HASNT MOVED :( (and computer is very unhappy as it now has to do a thing)
+                if (cursor.timeout) { iV.cursor.timeout--; return false; }
+        
+                cursor.timeout = cursor.timeoutMax; // reset timeout
+                // hide the cursor (tween can be interrupted, so we cache it)
+                iV.cursor.tween = scene.tweens.add({
+                    targets: vars.input.cursor.phaserObject,
+                    alpha: 0,
+                    duration: 2000,
+                    onComplete: ()=> { vars.input.cursor.tween=null; } // fade out has completed, nullify the tween var
+                });
+                return 'Hiding mouse pointer';
+            }
+        },
 
         init: ()=> {
             vars.DEBUG ? console.log(`%cFN: input > init`, `${consts.console.defaults} ${consts.console.colours.functionCall}`) : null;
+
+            let gV = vars.game;
+            gV.phaserGameObject.canvas.style.cursor='none';
+            // hide the default cursor and replace it with the ai finger cursor
+            let cC = consts.canvas;
+            let xyOffsets = { x: 620, y: 880 }; // cards Dealt isnt created until the game starts, so we just set with constants
+            vars.input.cursor.phaserObject = scene.add.image(cC.cX,cC.height*0.85, 'ui','aiFingerMoving').setScale(0.8).setName('playerCursor').setData({ over: null, cardsLeftXY: xyOffsets }).setDepth(consts.depths.debug+1).setVisible(false); // this cursor sits above everything
+            
+            // initialise the vars used to fade out the cursor after x seconds being stationary
+            let seconds = 5;
+            let fps = gV.phaserGameObject.config.fps.target || 60; // assume 60fps if it isnt set (default for phaser)
+            vars.input.cursor.timeout = seconds * fps;
+            vars.input.cursor.timeoutMax = seconds * fps;
+            let cursorOffsets = consts.cursorOffsets;
+            vars.input.cursor.offsets = { x: cursorOffsets.x, y: cursorOffsets.y };
+
+            // hide the cursor. will be shown again when main screen has been created
+            vars.input.cursor.quickShow(false);
+
+            // deal with cursor movement
+            !vars.isPhone && !scene.cursors ? scene.cursors = scene.input.keyboard.createCursorKeys() : null;
+            if (scene.cursors) {
+                scene.input.keyboard.on('keyup', (_key)=> {
+                    if (!_key.key.includes('Arrow') && _key.code!=='Space') return false;
+                    let direction = _key.code==='Space' ? 'select' : _key.key.replace('Arrow','').toLowerCase();
+                    vars.DEBUG ? console.log(`%c🖮 Attempting to move cursor ${direction} or click card`, `color: black; background-color: #50FF50`) : null;
+                    vars.input.cursor.keyboardMove(direction);
+                });
+            }
+            
+            // deal with mouse move within the game
+            scene.input.on('pointermove', function (pointer) {
+                let iV = vars.input;
+                let c = iV.cursor;
+                let cOff = consts.cursorOffsets;
+                // get mouse pointer image and set its position
+                c.phaserObject.setPosition(pointer.x+cOff.x, pointer.y+cOff.y);
+
+                // update the faders vars
+                iV.cursor.currentX = ~~pointer.x;
+                iV.cursor.currentY = ~~pointer.y;
+                
+                if (iV.usingCursorKeys) return false; // if the player is using cursor keys ignore the next function
+                
+                //c.updatePointer();
+            });
 
             scene.input.on('gameobjectup', function (pointer, gameObject) {
                 if (!pointer.button) { // ALL CLICKS START HERE
@@ -1601,12 +1989,14 @@ var vars = {
 
             if (gameObject.name==='WD_enterName') { // WELL DONE SCREEN button
                 iV.enableInput(false,200);
+                delete(iV.pageButtons.wellDone); // this button is destroyed, so remove it from the pageButtons
                 vars.audio.playSound('buttonClick');
                 vars.UI.wellDoneDestroy();
                 vars.containers.show('wellDone', false);
                 // move the shader image to the input container
                 let sC = vars.game.scoreCard;
                 sC.moveShaderToNewContainer('inputName');
+                sC.enableNameEntry(true);
                 sC.inputContainer.setVisible(true);
                 return true;
             }
@@ -2513,6 +2903,19 @@ var vars = {
             let textColours = [htmlC.blueLight,htmlC.blueDark];
             let bgData = { textBG: true, textBGColour: 0x0, fullScreenBG: true, fullScreenColour: 0x010101 };
             sV.available['Rules'] = new Scroller(1600,consts.canvas.height,msg,textColours,60,0,consts.depths.scroller, bgData);
+        },
+
+        findScrollerByInt: (_int=null)=> {
+            let found = false;
+            if (!vars.checkType(_int,'int')) return found;
+
+            for (let avail in vars.scrollers.available) {
+                if (vars.scrollers.available[avail].scrollerInt===_int && !found) {
+                    found = vars.scrollers.available[avail];
+                }
+            }
+
+            return found;
         }
     },
 
@@ -2524,7 +2927,7 @@ var vars = {
             vars.DEBUG ? console.log(`%cFN: shaders > init`, `${consts.console.defaults} ${consts.console.colours.functionCall}`) : null;
 
             let sV = vars.shaders;
-            sV.fireworksRes = vars.isPhone ? 1/10 : 1/2;
+            sV.fireworksRes = vars.isPhone ? 1/10 : 1/3;
             let res = sV.fireworksRes;
             let c = consts.canvas;
             scene.shaders = {};
@@ -2553,6 +2956,7 @@ var vars = {
         },
 
         initGameScreen() {
+            // main screen keyboard input has already been implemented!
             let cC = consts.canvas;
             let uiFS = consts.fontSizes.gameScreen; // UI Font Size
             let container = scene.groups.gamePlayingUI;
@@ -2632,7 +3036,12 @@ var vars = {
             vars.particles.init();
             let cC = consts.canvas;
             let pV = vars.particles;
-            let container = scene.containers.mainScreen;
+            let screenName = 'mainScreen';
+            let container = scene.containers[screenName];
+
+            let iV = vars.input;
+            let pageButtons = iV.pageButtons;
+            pageButtons[screenName] = [];
 
             let depth = consts.depths.mainScreen;
             let unlocked = vars.localStorage.unlocked;
@@ -2674,8 +3083,9 @@ var vars = {
             let versionTxt = `VERSION: ${vars.version.toString()}${vars.version<0.8 ? String.fromCharCode(945) : vars.version<1 ? String.fromCharCode(946) : ''} ${vars.revision}`;
             let versionText = scene.add.text(cC.width*0.25, cC.height *0.8,versionTxt, {fontSize: '24px'}).setTint(0x0).setOrigin(0.5).setName('versionText').setAlpha(1).setDepth(depth);
 
-            // the more info button is available on several pages
+            // the MORE INFO BUTTON is available on several pages
             let moreInfoIcon = scene.add.image(cC.width*0.25, cC.height*0.875, 'ui', 'moreInfoIcon').setName('MS_moreInfoButton').setAlpha(0).setDepth(depth).setInteractive();
+            pageButtons[screenName].push('MS_moreInfoButton');
             container.add(moreInfoIcon);
             vars.UI.tempUIObjects.push(moreInfoIcon);
 
@@ -2702,10 +3112,11 @@ var vars = {
             unlocked ? buttons.pop() : null;
             buttons.forEach((_key)=> {
                 let buttonBG = scene.add.image(cC.width*0.75, y, 'mainScreen', 'buttonBG').setName(`MS_${_key}`).setAlpha(0).setDepth(depth-1).setInteractive();
+                pageButtons[screenName].push(`MS_${_key}`);
                 vars.UI.tempUIObjects.push(buttonBG);
                 let buttonText = scene.add.image(cC.width*0.75, y, 'mainScreen', `${_key}Text`).setName(`MST_${_key}Text`).setAlpha(0).setDepth(depth);
                 vars.UI.tempUIObjects.push(buttonText);
-
+                
                 container.add([buttonBG,buttonText]);
                 y+=buttonBG.height+10;
             });
@@ -2756,15 +3167,22 @@ var vars = {
                 vars.UI.beginMainScreenLoop();
             };
 
+            vars.input.cursor.quickShow(true); // quick show the cursor (itll time out after a few seconds if were on a phone. Note: I dont auto hide it as I currently test isPhone on a PC)
             
         },
 
         initNewDealScreen: ()=> {
             let cC = consts.canvas;
-            let container = scene.containers.NGoptions;
+            let screenName = 'NGoptions';
+            let container = scene.containers[screenName];
             let depth = consts.depths.newDealScreen;
             let bg = scene.add.image(cC.cX, cC.cY, 'whitePixel').setScale(cC.width, cC.height).setTint(0x0).setAlpha(0.9).setDepth(depth);
             container.add(bg);
+
+            // set up page buttons
+            let iV = vars.input;
+            let pageButtons = iV.pageButtons;
+            pageButtons[screenName] = [];
 
             let x = cC.cX;
             let yOff = 250;
@@ -2772,14 +3190,17 @@ var vars = {
             let uiFS = 48;
             let tint = consts.tints.orange;
             ['NEW DEAL', 'CANCEL'].forEach( (_o)=> {
-                let textBG = scene.add.image(x,y, 'ui', 'textBoxBigBG').setName(`NG_${_o.replace(/ /, '')}_Button_ui`).setDepth(depth).setInteractive();
-                let textText = scene.add.bitmapText(x,y, 'defaultFont', _o, uiFS).setName(`NG_${_o.replace(/ /, '')}_Text`).setOrigin(0.5).setDepth(depth+1).setTint(tint);
+                let name = _o.replace(/ /, '');
+                let textBG = scene.add.image(x,y, 'ui', 'textBoxBigBG').setName(`NG_${name}_Button_ui`).setDepth(depth).setInteractive();
+                pageButtons[screenName].push(`NG_${name}_Button_ui`);
+                let textText = scene.add.bitmapText(x,y, 'defaultFont', _o, uiFS).setName(`NG_${name}_Text`).setOrigin(0.5).setDepth(depth+1).setTint(tint);
                 container.add([textBG, textText]);
                 y+=yOff;
             });
         },
 
         initOptionsScreen: ()=> {
+            // currently KB is NOT supported! (too much stuff on the page)
             // get the loaded options
             let mO = vars.localStorage.options.music;
             let container = scene.containers.optionsScreen;
@@ -2855,10 +3276,15 @@ var vars = {
 
         initPlayerLose: ()=> { // this is shown when the player has ran out of playable cards
             let cC = consts.canvas;
-            let container = scene.containers.playerLose;
+            let screenName = 'playerLose';
+            let container = scene.containers[screenName];
             let depth = consts.depths.playerLose;
             let bg = scene.add.image(cC.cX, cC.cY, 'whitePixel').setScale(cC.width, cC.height).setTint(0x0).setAlpha(0.9).setDepth(depth);
             container.add(bg);
+
+            let iV = vars.input;
+            let pageButtons = iV.pageButtons;
+            pageButtons[screenName] = [];
 
             let options = ['HOME', 'NEW DEAL', 'HIGH SCORES', 'EXIT'];
             let x = cC.cX;
@@ -2867,8 +3293,10 @@ var vars = {
             let uiFS = 48;
             let tint = consts.tints.orange;
             options.forEach( (_o)=> {
-                let textBG = scene.add.image(x,y, 'ui', 'textBoxBigBG').setName(`NG_${_o.replace(/ /, '')}_Button_ui`).setDepth(depth).setInteractive();
-                let textText = scene.add.bitmapText(x,y, 'defaultFont', _o, uiFS).setName(`NG_${_o.replace(/ /, '')}_Text`).setOrigin(0.5).setDepth(depth+1).setTint(tint);
+                let name = _o.replace(/ /, '');
+                let textBG = scene.add.image(x,y, 'ui', 'textBoxBigBG').setName(`NG_${name}_Button_ui`).setDepth(depth).setInteractive();
+                pageButtons[screenName].push(`NG_${name}_Button_ui`);
+                let textText = scene.add.bitmapText(x,y, 'defaultFont', _o, uiFS).setName(`NG_${name}_Text`).setOrigin(0.5).setDepth(depth+1).setTint(tint);
                 container.add([textBG, textText]);
                 y+=yOff;
             });
@@ -2976,8 +3404,7 @@ var vars = {
             // show the container
             vars.containers.show('wellDone',true);
 
-            // start the star spray
-            //vars.particles.winStarsEnable(true); // this is stopped on wellDoneDestroy (eg when the player clicks the enter name button)
+            // NOTE: the BUTTON for this page is in wellDoneShowContinueButton
 
         },
 
@@ -3348,18 +3775,22 @@ var vars = {
 
         wellDoneShowContinueButton: ()=> { // called from wellDoneShowScore
             let cC = consts.canvas;
-            let container = scene.containers.wellDone;
+            let iV = vars.input;
+            let depth = 18;
+            let screenName = 'wellDone';
+            let container = scene.containers[screenName];
+            // we only have 1 BUTTON on this page (enter name) so nothing needs setting up
 
-            let textButton = scene.add.image(cC.cX,cC.height*0.75,'ui','textBoxBigBG').setName('WD_enterName').setScale(1.4,1).setAlpha(0).setDepth(18).setInteractive();
-            let enterNameText = scene.add.bitmapText(cC.cX, cC.height*0.75, 'defaultFont', `ENTER NAME`, 64).setOrigin(0.5).setName('enterNameText').setDepth(19).setAlpha(0).setLetterSpacing(10).setTint(consts.tints.orange);
+            
+            let textButton = scene.add.image(cC.cX,cC.height*0.75,'ui','textBoxBigBG').setName('WD_enterName').setScale(1.4,1).setAlpha(0).setDepth(depth).setInteractive();
+            iV.pageButtons[screenName] = [['WD_enterName']];
+
+            let enterNameText = scene.add.bitmapText(cC.cX, cC.height*0.75, 'defaultFont', `ENTER NAME`, 64).setOrigin(0.5).setName('enterNameText').setDepth(depth+1).setAlpha(0).setLetterSpacing(10).setTint(consts.tints.orange);
 
             container.add([textButton, enterNameText]);
 
-            scene.tweens.add({
-                targets: [textButton, enterNameText],
-                alpha: 1,
-                duration: 1000,
-            })
+            // fade in the button and text
+            scene.tweens.add({ targets: [textButton, enterNameText], alpha: 1, duration: 1000 });
         },
 
         wellDoneShowScore: ()=> { // called from buildWellDone

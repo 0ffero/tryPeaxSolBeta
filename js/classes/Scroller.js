@@ -32,11 +32,6 @@ let Scroller = class {
         this.scene.load.setPath(this.defaultAssetsFolder);
 
         this.scene.load.atlas('scroller', `scroller.png`, `scroller.json`);
-        /* // font
-        if (!this.scene.cache.bitmapFont.exists('scoreCard')) {
-            this.scene.load.bitmapFont('scoreCard', `${folder}/scoreCard.png`, `${folder}/scoreCard.xml`);
-            toLoad++;
-        } */
 
         this.scene.load.once('complete', ()=> { this.filesLoaded(); });
     }
@@ -96,7 +91,12 @@ let Scroller = class {
     }
 
     initButtons() {
-        this.buttons = {};
+        let iV = vars.input;
+        let pageButtons = iV.pageButtons;
+        !pageButtons['scrollers'] ? pageButtons['scrollers'] = [] : null;
+        let scrollerInt = this.scrollerInt = pageButtons['scrollers'].length;
+        pageButtons['scrollers'][scrollerInt] = [];
+        this.buttons = {}; // this has been generalised above as all pages now need fast access to all buttons due to KB cursor keys being added
 
         let x = this.cC.width*0.958;
         let y = this.cC.cY;
@@ -106,7 +106,9 @@ let Scroller = class {
         let buttons = ['pause','reverse','top','x1','close'];
         let uiFS = 18;
         buttons.forEach((_b,_i)=> {
-            let button = this.scene.add.image(x,y+yOffsets[_i],'scroller',_b).setName(`SCRL_${_b}`).setDepth(this.depth).setInteractive();
+            let buttonName = `SCRL_${_b}`;
+            let button = this.scene.add.image(x,y+yOffsets[_i],'scroller',_b).setName(buttonName).setDepth(this.depth).setInteractive();
+            pageButtons['scrollers'][scrollerInt].push(buttonName);
             let text = scene.add.bitmapText(x, y+yOffsets[_i]+64, 'defaultFontSmall', _b !== 'x1' ? _b.toUpperCase() : 'SPEED', uiFS).setOrigin(0.5).setDepth(this.depth);
             this.buttons[_b] = { button: button, text: text };
             this.container.add([button,text]);

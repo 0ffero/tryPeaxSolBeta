@@ -54,15 +54,26 @@ let ScoreCard = class {
     init() { // runs after all files have loaded
         this.initNameEntry();
         this.initHighScoreTable();
+
+        // disable name entry until requested
+        this.enableNameEntry(false);
+
+        // initialise the keyboard used for entering name
+        this.initKeyboard();
     }
 
     initHighScoreTable() {
         this.defaultSortBy = 'score';
         let cC = consts.canvas;
-        let depth = consts.depths.highScoreTable;
+        let screenName = 'highScoreTable';
+        let depth = consts.depths[screenName];
         this.highScoreTableContainer = this.scene.add.container().setName('highScoreTableContainer').setDepth(depth);
         this.containerNames.push(['highScoreTable', 'highScoreTableBG']);
         this.scene.containers.highScoreTable = this.highScoreTableContainer;
+
+
+        // we only add 1 BUTTON at this time (as the high score table starts with only the "sort by" times button)
+        vars.input.pageButtons[screenName] = ['times_HSTB'];
 
         let bg = this.scene.add.image(cC.cX, cC.cY,'whitePixel').setScale(cC.width,cC.height).setTint(0x0).setName('highScoreTableBG').setDepth(depth-1).setInteractive();
         // the shader image is moved between containers as the more we make the slower this game is on android
@@ -93,6 +104,12 @@ let ScoreCard = class {
 
     }
 
+    initKeyboard() {
+        scene.input.keyboard.on('keyup', (_key)=> {
+            this.inputKeyDown(_key);
+        });
+    }
+
     initNameEntry() {
         let depth = consts.depths.inputPlayerName;
         this.inputContainer = this.scene.add.container().setName('scoreCardContainer').setDepth(depth);
@@ -120,8 +137,7 @@ let ScoreCard = class {
                 let input = this.scene.add.bitmapText(x, y, font, _col).setName(`HSL_${_col}`).setOrigin(0.5).setDropShadow(2,2).setTint(consts.tints.orange).setDepth(150).setInteractive();
                 this.inputContainer.add(input);
                 input.on('pointerup', (_p)=> {
-                    let objectName = _p.manager._tempHitTest[0].name; // can I rely on this? TODO: only change if it causes any problems
-                    // what its doing is getting the object that we click on as we cant use "this" (usually the phaser object) inside the class (as this. is talking about the class)
+                    let objectName = _p.manager._tempHitTest[0].name;
                     this.click(objectName);
                 });
                 x+=xyInc[0];
@@ -186,7 +202,8 @@ let ScoreCard = class {
         if (!vars.input.enabled) return 'Input is currently disabled!';
         if (!_oName.startsWith('HSL_')) return false;
 
-        vars.input.enableInput(false,200); // disable input for 200ms (stops accidental double clicks)
+        let delay = vars.input.usingCursorKeys ? 50 : 200;
+        vars.input.enableInput(false,delay); // disable input for 200ms (stops accidental double clicks)
 
         let letter = _oName.replace('HSL_','');
         let updateUI = false;
@@ -201,15 +218,17 @@ let ScoreCard = class {
 
             case '>': // submit name
                 vars.audio.playSound('acceptName');
-                // update the high score table
-                this.updateHighScoreTable();
+                this.enableNameEntry(false); // disable name entry
+                this.updateHighScoreTable(); // update the high score table
 
+                // move the shader image back into the high score table container
+                this.moveShaderToNewContainer('highScoreTable');
+                
                 // show the hi score table
                 vars.DEBUG ? console.log(`Showing the high score table`) : null;
                 this.buildHighScorePages(this.defaultSortBy);
                 this.showInputContainer(false);
-                // move the shader image back into the high score table container
-                this.moveShaderToNewContainer('highScoreTable');
+
                 // show the high score table
                 this.showHighScoreTable();
             break;
@@ -314,7 +333,7 @@ let ScoreCard = class {
         this.playersHiScorePage!==this.currentPage ? this.highScoreJumpToPage() : null;
     }
 
-    highScoreCheck(_score) {
+    /*highScoreCheck(_score) { // UNUSED!! DELETE?
         let playerScore = _score;
         let highScores = [];
         this.scoreDetails.forEach( (_sD)=> {
@@ -363,12 +382,50 @@ let ScoreCard = class {
         this.enableNameEntry(true);
         // now show the input container
         this.showInputContainer(true);
-    }
+    }*/
 
     highScoreJumpToPage() { // after the player enters their name, we jump to the page with the new score
         this.oldPage = 1; // we set the old page to 1 (default page when building the pages)
         this.currentPage = this.playersHiScorePage; // the way showPage works we just set current page to required page
         this.showPage(); // now showPage will hide page 1 and show the players high score page instead
+    }
+
+    inputKeyDown(_key) { // handles keydown when entering name
+        vars.DEBUG ? console.log(`%cHigh Score table KEYDOWN.\nEntry is currently ${!this.player.enteringName ? 'disabled' : 'enabled'}`,`color: ${!this.player.enteringName ? '#ff8000' : '#10FF10'}`) : null;
+        if (!this.player.enteringName) return false;
+
+        if (_key.keyCode<65 || _key.keyCode>90) {
+            if (_key.keyCode!==189 && _key.keyCode!==190 && _key.keyCode!==8 && _key.keyCode!==13) {
+                console.log(`%cPlayer tried to enter an invalid character: ${_key.key} with char code ${_key.keyCode}`,'color: orange');
+                return false;
+            }
+        };
+    
+        if ((_key.keyCode>=65 && _key.keyCode<=90) || (_key.keyCode===189 || _key.keyCode===190)) {
+            let letter = _key.key.toUpperCase();
+            vars.DEBUG ? console.log(`%cUser is entering the letter ${letter}`,'color: #10FF10') : null;
+            // call click function
+            this.click(`HSL_${letter}`);
+            return true;
+        };
+    
+        if (_key.keyCode===8) {
+            vars.DEBUG ? console.log(`Deleting a character`) : null;
+            // call click function
+            this.click('HSL_<');
+            return true;
+        };
+    
+        if (_key.keyCode===13) {
+            vars.DEBUG ? console.log(`Return key pressed. Entering name into High Score Table`) : null;
+            // call click function
+            this.click('HSL_>');
+            return true;
+        };
+    
+        // if we get here, the key hasnt been dealt with. ie we should never get here
+        vars.DEBUG ? console.log(_key) : null;
+          
     }
 
     moveShaderToNewContainer(_toContainerName=null) { // the from container is done by checks
@@ -445,10 +502,20 @@ let ScoreCard = class {
             container.getAll().forEach((_button)=> {
                 if (_button.name.startsWith('hSSolutionID_')) { _button.setAlpha(0); ;}
             });
-        } else {
+            vars.input.pageButtons.highScoreTable = vars.input.pageButtons.highScoreTable.slice(0,1); // remove all but the current sort by button
+        } else { // we're showing the solution buttons
             let sC = vars.game.scoreCard;
+            // first, make sure the only button in the button list is the sort by
+            vars.input.pageButtons.highScoreTable = vars.input.pageButtons.highScoreTable.slice(0,1);
             container.getAll().forEach((_button)=> {
-                _button.name.startsWith('hSSolutionID_') ? _button.getData('page')===sC.currentPage ? _button.setAlpha(1) : _button.setAlpha(0) : null;
+                if (_button.name.startsWith('hSSolutionID_')) {
+                    if (_button.getData('page')===sC.currentPage) { // we're showing this button
+                        _button.setAlpha(1);
+                        vars.input.pageButtons.highScoreTable.push(_button.name); // add it to the button list
+                    } else {
+                        _button.setAlpha(0);
+                    };
+                };
             });
         };
         return false;
@@ -456,11 +523,20 @@ let ScoreCard = class {
 
     showPage() { // hide the old page and shows the new one
         vars.DEBUG ? console.log(`%cHiding page ${this.oldPage} and showing page ${this.currentPage}`, 'color: black; background-color: yellow;') : null;
+        let iV = vars.input;
+        let pageButtons = iV.pageButtons;
+        pageButtons.highScoreTable = pageButtons.highScoreTable.slice(0,1);
         this.highScoreTableContainer.getAll().forEach((_score)=> {
             if (_score.getData('page')) {
                 let page = _score.getData('page');
                 if (this.oldPage && page===this.oldPage) { _score.setAlpha(0); }; // hide all the stuff on the old page
-                if (page===this.currentPage) { _score.setAlpha(1); }; // show all the stuff on the new page
+                if (page===this.currentPage) { // show all the stuff on the new page
+                    _score.setAlpha(1);
+                    // and if this button starts with hSSolutionID_ add it to the pageButtons
+                    if (_score.name.startsWith('hSSolutionID_')) {
+                        pageButtons.highScoreTable.push(_score.name);
+                    };
+                };
             };
         });
         this.oldPage = null;
@@ -470,7 +546,12 @@ let ScoreCard = class {
         let container = this.highScoreTableContainer;
         ['scores_HSTB','times_HSTB'].forEach((_button)=> {
             let object = container.getByName(_button);
-            object.alpha ? object.setAlpha(0) : object.setAlpha(1);
+            if (object.alpha) {
+                object.setAlpha(0);
+            } else {
+                object.setAlpha(1);
+                vars.input.pageButtons.highScoreTable[0] = _button;
+            };
         });
     }
 

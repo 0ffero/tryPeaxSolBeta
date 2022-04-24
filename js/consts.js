@@ -20,6 +20,8 @@ const consts = {
         defaults: 'font-weight: bold; font-size: 14px; font: \'consolas\'; color:'
     },
 
+    cursorOffsets: { x: 25, y: 40 },
+
     depths: {
         gameScreen:             1,
         foreground:             5,

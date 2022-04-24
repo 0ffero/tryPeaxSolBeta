@@ -709,6 +709,7 @@ let Unlockables = class {
                 tintUnlocked.on('pointerup', this.click, tintUnlocked);
                 let page = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage);
                 page ? tintUnlocked.setAlpha(0).setVisible(false) : null;
+                console.log(`Adding tint (${_tint[0]}) to page ${page}`);
 
                 if (_tint[3]===vars.gameScreen.tint) { // this is the current tint, move the tick mark to it the ticks page number
                     let bC = tintUnlocked.getBottomCenter();
@@ -1029,12 +1030,13 @@ let Unlockables = class {
 
     // THE SCROLLER HAS JUST STOPPED
     scrollToNearest() { // SCROLLER HAS FINISHED, SCROLL TO THE NEAREST UNLOCK
+
         vars.game.unlockables.scrollerWaitingOnCount=0;
         this.unlockGroup.getChildren().forEach((_uL)=> {
             vars.game.unlockables.scrollerWaitingOnCount++;
             this.scene.tweens.add({
                 targets: _uL,
-                x: _uL.x-102,
+                x: _uL.x-101,
                 delay: 250,
                 duration: 1000,
                 ease: 'Quad.easeInOut',
