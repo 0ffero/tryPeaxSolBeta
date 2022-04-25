@@ -27,9 +27,7 @@ let Deck = class {
         };
 
         let times = getRandom(30,70);
-        for (let t=0; t<times; t++) {
-            shuffle(this.cardSet);
-        }
+        for (let t=0; t<times; t++) { shuffle(this.cardSet); };
     }
 
     decreaseScore() {

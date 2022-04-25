@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 072.007',
+    revision: 'rev 073.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -68,11 +68,13 @@ var vars = {
         'Revision 066   - Disabled input when moving from main screen to high score table whilst looping to stop weirdness when user has clicked on a main screen button as its fading out.',
         'Revision 067, 068  - Modified UP counts on each page to show >99999 where applicable',
         'Revision 069 - 072 - More changes to allow cusror movement on pages. Cursor now hides during screen transition. And auto selects the main button on the page.',
+        'Revision 073   - Fixed gamePlayingUI (the first thing created) to be invisible until the game is actually being played (required to add game screen buttons without it always "bring on top")',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
         'Revision 002 - 006 - Replaced the splashScreen for phones only. (changes to rotators and particles).',
         'Revision 007   - Reduced the render resolution of the particles shader for PCs to 1/3',
+        'Revision 008   - Reuced the amount of sparkles on PCs',
 
         'FUTURE REVISIONS:',
         'Unlockable tints work. Unlockable cards, not so much.'
@@ -495,7 +497,7 @@ var vars = {
             scene.groups.cardCurrent.setDepth(1);
 
             scene.groups.gamePlayingUI = scene.add.container().setName('gamePlayingUI');
-            scene.groups.gamePlayingUI.setDepth(0);
+            scene.groups.gamePlayingUI.setDepth(0).setVisible(false).setAlpha(0);
 
             scene.groups.winDance = scene.add.group().setName('winDance');
 
@@ -1361,7 +1363,10 @@ var vars = {
         init: function() {
            vars.DEBUG ? console.log(`\n%cFN: game > init`, `${consts.console.defaults.replace('14', '16')} ${consts.console.colours.important}`) : null;
 
-            // start music if enabled
+           // show the gamePlayingContainer
+           scene.groups.gamePlayingUI.setVisible(true).setAlpha(1);
+ 
+           // start music if enabled
             vars.music.getNextTrack();
 
             // enable game screen colour tweens
@@ -1382,8 +1387,7 @@ var vars = {
 
             // get a new deck and deal
             scene.tweens.addCounter({
-                from: 0,
-                to: 1,
+                from: 0, to: 1,
                 duration: 1000,
                 onComplete: ()=> {
                     let gV = vars.game;
@@ -1485,6 +1489,9 @@ var vars = {
         restart: ()=> {
             // make sure looping is false
             vars.containers.looping=false;
+
+            // show the gamePlayingContainer
+            scene.groups.gamePlayingUI.setVisible(true).setAlpha(1);
 
             vars.containers.cardsDestroyAll();
 
@@ -1703,12 +1710,19 @@ var vars = {
                 
                 let ignore = ['mainScreen'];
                 let topMostContainer = null;
-                let depthMax = 0;
+                let depthMax = -Infinity;
                 if (Object.keys(iV.pageButtons).length>1) {
                     for (let containerName in iV.pageButtons) {
-                        let container = vars.containers.getByName(containerName);
-                        if (!ignore.includes(containerName) && container.visible && container.depth>depthMax) {
-                            topMostContainer=containerName;
+                        if (containerName==='scrollers') {
+                            let available = vars.scrollers.available;
+                            for (let _a in available) {
+                                if (available[_a].container.visible && available[_a].container.alpha===1 && available[_a].depth>depthMax ) { topMostContainer=available[_a].containerName; };  // scroller class has a depth var
+                            };
+                        } else {
+                            let container = vars.containers.getByName(containerName);
+                            if (!ignore.includes(containerName) && container.visible && container.depth>depthMax) {
+                                topMostContainer=containerName;
+                            };
                         };
                     };
                 };
@@ -1970,13 +1984,32 @@ var vars = {
                     // first: the only keys we are interested in beyond this point is arrows, space/enter & esc
                     let allowed = ['Space','Enter','Escape'];
                     if (!_key.key.includes('Arrow') && !allowed.includes(_key.key)) return false;
-
+                    
+                    
                     // if we get here, we do indeed have an Arrow, Space/Enter or Esc up event
                     let key = _key.key;
                     if (key==='Escape') { // ESCAPE key is used to close several containers (HS,NG - both, gS)
+                        console.log(`%cEscaped pressed...`, 'color: #44b5cc');
+                        let onTop = vars.input.cursor.getCurrentlyOnTop();
+                        if (onTop==='highScoreTable') { // high score table visible, hide it
+                            console.log(`  > Hiding high score table`);
+                            // we have to figure out why the high score table is visible
+                            // was it due to looping?
+                            // was it after the player got a high score?
+                            // was it because the player specifically asked for the high score table? -> back to mainScreen
+                        } else if (onTop==='gamePlayingUI') {
+                            console.log(`  > Asking player if they want to go home (main screen)`);
+                        } else if (onTop==='scrollers') {
 
+                        };
                         return true;
                     };
+
+                    
+                    // first time one of the cursor keys have been pressed? set usingCursorKeys
+                    !vars.input.usingCursorKeys ? vars.input.usingCursorKeys=true : null;
+
+                    // now deal with the key
                     let direction = key==='Space' || key==='Enter' ? 'select' : key.replace('Arrow','').toLowerCase();
                     let msg = direction==='select' ? `Clicking on button` : `Moving cursor ${direction}`;
                     vars.DEBUG ? console.log(`%c🖮 ${msg}`, `color: black; background-color: #50FF50`) : null;
@@ -2808,9 +2841,9 @@ var vars = {
                 x: 0, y: 0,
                 frame: 'white',
                 //tint: 0xff0000,
-                quantity: 50, lifespan: 1000, gravityY: 1,
-                scale: { start: 0, end: 0.2 },
-                alpha: { start: 0.5, end: 0 },
+                quantity: 15, lifespan: 1000, gravityY: -1,
+                scale: { start: 0, end: 0.25 },
+                alpha: { start: 0.6, end: 0 },
                 blendMode: 1,
                 emitZone: { type: 'random', source: vars.phaserObject.mainScreen }
             });
@@ -3055,9 +3088,12 @@ var vars = {
             // main screen keyboard input has already been implemented!
             let cC = consts.canvas;
             let uiFS = consts.fontSizes.gameScreen; // UI Font Size
-            let container = scene.groups.gamePlayingUI;
+            let screenName = 'gamePlayingUI';
+            let container = scene.groups[screenName];
             let bonusPointsContainer = scene.containers.bonusPoints;
             let depth = consts.depths.gameScreen;
+
+            vars.input.pageButtons[screenName] = ['homeButton_ui']; // only the home button is available on the gameScreen, however, its accessed by hitting escape
 
             let bg = scene.add.image(cC.cX, cC.cY, 'gameBG').setName('game_bg').setTint(vars.gameScreen.tint).setDepth(depth-1);
 
@@ -3791,6 +3827,7 @@ var vars = {
             // set the game fg to black
             vars.UI.showForegroundBarrier(true);
             vars.containers.show('mainScreen', true);
+            scene.groups.gamePlayingUI.setVisible(false).setAlpha(0);
         },
 
         showWellDone: ()=> {
