@@ -100,6 +100,26 @@
 				"h": 957
 			}
 		},
+		"highScoreTableSideButtons": {
+			"frame": {
+				"x": 1099,
+				"y": 1,
+				"w": 150,
+				"h": 942
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 150,
+				"h": 942
+			},
+			"sourceSize": {
+				"w": 150,
+				"h": 942
+			}
+		},
 		"nextIcon": {
 			"frame": {
 				"x": 719,
@@ -147,7 +167,7 @@
 		"image": "spritesheet",
 		"format": "RGBA8888",
 		"size": {
-			"w": 1098,
+			"w": 1250,
 			"h": 1053
 		},
 		"scale": "1"

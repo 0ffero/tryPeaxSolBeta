@@ -709,6 +709,7 @@ let Unlockables = class {
                 tintUnlocked.on('pointerup', this.click, tintUnlocked);
                 let page = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage);
                 page ? tintUnlocked.setAlpha(0).setVisible(false) : null;
+                page+1 > this.ULd.pages ? this.ULd.pages=page+1:null;
                 console.log(`Adding tint (${_tint[0]}) to page ${page}`);
 
                 if (_tint[3]===vars.gameScreen.tint) { // this is the current tint, move the tick mark to it the ticks page number
@@ -741,7 +742,7 @@ let Unlockables = class {
             this.UIButtonsAndText[child].setAlpha(alpha).setVisible(vis);
         };
         // unlocked
-        this.ULd.pages = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage)+1;
+        //this.ULd.pages = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage)+1;
         vis = this.ULd.pages>1 ? true : false; alpha = vis ? 1 : 0;
         if (this.ULd.pages>1) { // whereas unlockables has to have at least one page
             this.UIButtonsAndTextUnlocked.pageText.setText(`PAGE ${this.ULd.currentPage+1} of ${this.ULd.pages}`);
@@ -901,6 +902,8 @@ let Unlockables = class {
     startScroller() { // CALLED FROM .click
         this.generateLootBoxScroller();   
         this.showContainer('lootboxemu');
+        // hide cursor
+        vars.input.enableInput(false);
 
         // now start it scrolling
         this.scrollTheEmu();
@@ -1198,6 +1201,9 @@ let Unlockables = class {
         this.winTweens.push(tween);
 
         this.lootBoxEmuFinished=true;
+
+        // re-enable input
+        vars.input.enableInput(true);
     }
 
     scrollerSwipe() { // HIDES the scroller after win screen is clicked

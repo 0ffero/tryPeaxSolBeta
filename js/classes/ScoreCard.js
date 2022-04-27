@@ -82,9 +82,9 @@ let ScoreCard = class {
 
         let hstBG = scene.add.image(cC.cX, cC.cY, 'highScoreTable', 'highScoreTableBG').setDepth(depth);
         // the next two buttons are only available when there are more than 1 page of scores
-        let prevButton = scene.add.image(cC.width*0.25, cC.height*0.88, 'highScoreTable', 'previousIcon').setDepth(depth).setName('previousPage_HSTB').setVisible(false).setInteractive();
-        let nextButton = scene.add.image(cC.width*0.75, cC.height*0.88, 'highScoreTable', 'nextIcon').setDepth(depth).setName('nextPage_HSTB').setVisible(false).setInteractive();
-
+        let prevButton = scene.add.image(400, cC.cY, 'highScoreTable', 'highScoreTableSideButtons').setOrigin(1,0.5).setFlipX(true).setCrop(0,0,0,0).setName('previousPage_HSTB').setVisible(false).setInteractive();
+        let nextButton = scene.add.image(1370, cC.cY, 'highScoreTable', 'highScoreTableSideButtons').setOrigin(0,0.5).setCrop(0,0,0,0).setName('nextPage_HSTB').setVisible(false).setInteractive();
+        
         let scoresButton = scene.add.image(cC.width*0.75, cC.height*0.175, 'highScoreTable', 'bestScoresIcon').setDepth(depth).setName('scores_HSTB').setAlpha(0).setInteractive();
         let timesButton = scene.add.image(cC.width*0.75, cC.height*0.175, 'highScoreTable', 'bestTimesIcon').setDepth(depth).setName('times_HSTB').setAlpha(1).setInteractive();
 
@@ -160,6 +160,33 @@ let ScoreCard = class {
             scale: 1.2,
             duration: 125,
             yoyo: true
+        });
+    }
+
+    animatePreviousNextButton(_show=true) {
+        let prevButton = this.highScoreTableContainer.getByName('previousPage_HSTB');
+        let nextButton = this.highScoreTableContainer.getByName('nextPage_HSTB');
+        let rX = nextButton.x;
+
+        let fromTo = _show ? [0,150] : [150,0];
+
+        let xy = [0,150];
+        scene.tweens.addCounter({
+            from: fromTo[0], to: fromTo[1],
+            duration: 500,
+            ease: 'Quad.easeOut',
+            onUpdate: (_t,_v)=> {
+                let value = ~~(_v.value+0.5);
+                if (_show) {
+                    prevButton.setCrop(0,0,value,prevButton.height);
+                    nextButton.setCrop(xy[1]-value,0,value,nextButton.height);
+                    nextButton.x=rX+(value/150)*150;
+                } else {
+                    prevButton.setCrop(xy[0]-value,0,value,prevButton.height);
+                    nextButton.setCrop(xy[1]-value,0,value,nextButton.height);
+                    nextButton.x=rX-((xy[1]-value)/150)*150;
+                };
+            }
         });
     }
 
@@ -261,7 +288,7 @@ let ScoreCard = class {
 
         let scores = [...this.scores]; // shallow-ish copy the scores
         let pages = [];
-        // split the scorea into page, each containing 10 scores
+        // split the scores into pages, each containing 10 scores
         while (scores.length) { pages.push(scores.splice(0,10)); };
 
         let font = 'scoreCard';
@@ -326,7 +353,7 @@ let ScoreCard = class {
         this.highScoreTableContainer.getByName('previousPage_HSTB').setVisible(pageNavEnabled);
         this.highScoreTableContainer.getByName('nextPage_HSTB').setVisible(pageNavEnabled);
         
-        // should the exit button be visible?
+        // show the exit button, prev and next
         this.showHSTableButtons(true);
 
         // jump to the appropriate page

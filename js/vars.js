@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 073.008',
+    revision: 'rev 077.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -69,12 +69,17 @@ var vars = {
         'Revision 067, 068  - Modified UP counts on each page to show >99999 where applicable',
         'Revision 069 - 072 - More changes to allow cusror movement on pages. Cursor now hides during screen transition. And auto selects the main button on the page.',
         'Revision 073   - Fixed gamePlayingUI (the first thing created) to be invisible until the game is actually being played (required to add game screen buttons without it always "bring on top")',
+        'Revision 074   - Unlocked page count should now work properly.',
+        'Revision 075   - LBE now hides and shows pointer at approp times.',
+        'Revision 076   - Added lS function to generate unlock id',
+        'Revision 077   - Added animated buttons (prev/next) on high score page',
+        'Revision 078   - Fixed minor bug when dealing with cursor keys',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
         'Revision 002 - 006 - Replaced the splashScreen for phones only. (changes to rotators and particles).',
         'Revision 007   - Reduced the render resolution of the particles shader for PCs to 1/3',
-        'Revision 008   - Reuced the amount of sparkles on PCs',
+        'Revision 008   - Reduced the amount of sparkles on PCs',
 
         'FUTURE REVISIONS:',
         'Unlockable tints work. Unlockable cards, not so much.'
@@ -642,11 +647,8 @@ var vars = {
 
             cV.ignoreLoop=true;
 
-            // disable input
-            let iV = vars.input;
-            iV.enableInput(false);
-
             // deal with the cursor object
+            let iV = vars.input;
             // is it currently visible?
             if (iV.cursor.phaserObject.visible) {
                 iV.cursor.phaserObject.setData({ wasVisible: true });
@@ -654,6 +656,10 @@ var vars = {
                 iV.cursor.phaserObject.setData({ wasVisible: false });
             };
             iV.cursor.quickShow(false);
+
+            // disable input
+            
+            iV.enableInput(false);
 
             scene.tweens.add({ // fade out the currently visible container
                 targets: currentContainer,
@@ -689,7 +695,7 @@ var vars = {
                                 vars.input.cursor.moveToPageButton();
                             };
                         }
-                    })
+                    });
                 }
             });
         }
@@ -926,6 +932,20 @@ var vars = {
 
         bonusUPsCheck: (_lL=null)=> {
             if (!_lL) return false; if (_lL<~~(new Date().toISOString().split('T')[0].replaceAll('-','')) && _lL>20220415) { vars.localStorage.giveBonusUPs(); };
+        },
+
+        generateUnlockedKeyForUser: ()=> { // generates and saves an unlock key for user
+            let endNum=0; let count=0; let cScount=0; let a=JSON.parse(window.localStorage.TPX_unlockables);
+            for (let b in a) {
+                if (a[b].id!=='1010101' && a[b].id!=='0101010') {
+                    count%2 ? endNum-=~~(a[b].id) : endNum+=~~(a[b].id); b.startsWith('cS') ? cScount++:null; count++;
+                };
+            };
+            let unlockID = `${endNum.toString(16).toUpperCase()}-${count.toString(16).toUpperCase()}-${cScount.toString(16).toUpperCase()}-${vars.version.toString().replace('.','')}`;
+            
+            // save it
+            let lV = vars.localStorage; let lS = window.localStorage; let pre = lV.pre;
+            lS[`${pre}_unlockKey`] = unlockID; lV.unlocked=true;
         },
 
         giveBonusUPs: ()=> {
@@ -1588,6 +1608,8 @@ var vars = {
             let b = vars.game.unlockables.containers.unlocked;
             //vars.containers.getByName('gamePlayingUIButtons').propertyValueSet('alpha',0);
             vars.UI.showGameplayUI(false,0.1,'tintView'); // hide the gameplay ui (as we want to focus on the tint of the back ground)
+            // show the gameplayui container
+            vars.containers.getByName('gamePlayingUI').setAlpha(1).setVisible(true);
             // FADE OUT the containers, HOLD, FADE them back IN
             scene.tweens.add({
                 targets: [a,b], alpha: 0,
@@ -1595,6 +1617,7 @@ var vars = {
                 yoyo: true,
                 onComplete: ()=> {
                     vars.UI.showGameplayUI(true);
+                    vars.containers.getByName('gamePlayingUI').setAlpha(0).setVisible(false);
                     vars.input.enableInput(true); // enable input again
                 }
             });
@@ -1662,6 +1685,22 @@ var vars = {
                 // if we get here looking for is an actual card object
                 vars.DEBUG ? console.log(`Clicking on the next cards-left card (${lookingFor.name})`) : null;
                 vars.game.deal.showNextRemainingCard(lookingFor);
+            },
+
+            escapeKeyPressed: ()=> {
+                console.log(`%cEscaped pressed...`, 'color: #44b5cc');
+                let onTop = vars.input.cursor.getCurrentlyOnTop();
+                if (onTop==='highScoreTable') { // high score table visible, hide it
+                    console.log(`  > Hiding high score table`);
+                    // we have to figure out why the high score table is visible
+                    // was it due to looping?
+                    // was it after the player got a high score?
+                    // was it because the player specifically asked for the high score table? -> back to mainScreen
+                } else if (onTop==='gamePlayingUI') {
+                    console.log(`  > Asking player if they want to go home (main screen)`);
+                } else if (onTop.startsWith('scroller_')) {
+                    console.log(`  > Hiding the scroller`);
+                };
             },
 
             findTheNearestCardToTheClickedOnOne: (_cName,_delay=false)=> { // KEYBOARD: used when clicking on a
@@ -1733,7 +1772,7 @@ var vars = {
             },
 
             keyboardMove: (_dir=null)=> { // moves the cursor via CURSOR KEYS, called from v.input
-                if (!vars.game.deal || !_dir) return false;
+                if (!_dir) return false;
 
                 // if direction is NOT 'select' (basically the click function when using the keyboard), check if usingCursors has been set to true
                 !vars.input.usingCursorKeys && ['up','down','left','right'].includes(_dir) ? vars.input.usingCursorKeys=true : null;
@@ -1747,10 +1786,16 @@ var vars = {
                 
                 vars.DEBUG ? console.log(` >> Moving cursor ${_dir}`) : null;
 
-                let cursorObject = c.phaserObject;
                 let cOff = consts.cursorOffsets;
+                
+                if (!vars.game.deal) { // This DISABLES access to buttons on gamePlayingUI as it deals with input itself
+                    vars.input.cursor.moveToNextPageButton(_dir);
+                    return true;
+                };
+                
+                // the deal and deck exists
+                let cursorObject = c.phaserObject;
                 let cOffset = [scene.groups.cardsDealt.x+cOff.x,scene.groups.cardsDealt.y+cOff.y];
-
                 switch (_dir) {
                     case 'down':
                         // move to cards left
@@ -1859,21 +1904,98 @@ var vars = {
                 }
             },
 
-            moveToPageButton() {
+            moveToNextPageButton: (_dir)=> {
+                let iV = vars.input;
+                let c = iV.cursor;
+                
+                // get the phaser object
+                let cursorObject = c.phaserObject;
+                
+                if (!cursorObject.visible || !cursorObject.alpha) return 'Ignoring function: Cursor isnt visible'; // ignore the function if the cursor isnt visible
+
+                // get what the cursor is currently over
+                let over = cursorObject.getData('over');
+
+                // find the container on top
+                let onTop = vars.input.cursor.getCurrentlyOnTop();
+                let container = vars.containers.getByName(onTop);
+
+                // get the buttons for that page
+                let pageButtons = iV.pageButtons[onTop];
+
+
+                // check if the cursor is currently over a button
+                if ((over && !pageButtons.includes(over)) || !over) { // the "over" is currently for a button NOT on this page
+                    console.log(`The currently over (${over}) isnt on this page (${onTop}). Moving to default button`);
+                    c.moveToPageButton(); // request the top button for this page
+                    return true;
+                };
+
+                // IF we get here the "over" is valid, find the next button
+                let found=null;
+                pageButtons.every((_pB,_i)=> { if (_pB===over && found===null) { found=_i; return true; }; return true; });
+
+                if (!vars.checkType(found,'int')) { vars.input.cursor.moveToPageButton(); return true; };
+
+                let retVal;
+                switch (_dir) {
+                    case 'up':
+                        retVal = found-1 < 0 ? pageButtons[pageButtons.length-1] : pageButtons[found-1];
+                    break;
+
+                    case 'down':
+                        retVal = found+1 >= pageButtons.length ? pageButtons[0] : pageButtons[found+1];
+                    break;
+
+                    case 'left': // left and right do different things depending on the page thats onTop
+                        if (onTop==='mainScreen') {
+                            retVal = pageButtons[0];
+                        } else if (onTop==='highScoreTable') {
+                            let nextButton = container.getByName('nextPage_HSTB');
+                            if (!nextButton.visible || !nextButton.alpha) return false;
+                            vars.game.scoreCard.showHighScorePage(false);
+                            return true;
+                        };
+                    break;
+
+                    case 'right':
+                        if (onTop==='mainScreen') {
+                            retVal = pageButtons[1];
+                        } else if (onTop==='highScoreTable') {
+                            let nextButton = container.getByName('nextPage_HSTB');
+                            if (!nextButton.visible || !nextButton.alpha) return false;
+                            vars.game.scoreCard.showHighScorePage(true);
+                            return true;
+                        };
+                    break;
+                };
+
+                if (!vars.checkType(retVal,'string')) { console.warn(`Invalid retVal ${retVal}. It should be a button on this screen!`); return false; };
+
+                console.log(`Looking for button with name ${retVal} in container ${onTop}`);
+                let button = container.getByName(retVal);
+                let buttonXY = [button.x, button.y];
+
+                let o = consts.cursorOffsets;
+                cursorObject.setPosition(buttonXY[0]+o.x,buttonXY[1]+o.y).setData({ over: retVal });
+
+            },
+
+            moveToPageButton: ()=> {
                 let pointerOffsetXY = [25,40];
                 let onTop = vars.input.cursor.getCurrentlyOnTop();
                 // (needed when moving to a new button) let allButtons = vars.input.pageButtons[onTop];
                 let c = vars.input.cursor;
                 let phaserObject = c.phaserObject;
                 if (!phaserObject.getData('over')) {
-                    console.log(`Cursor isnt currently over any buttons\nFinding out what the default button is for this page`);
+                    vars.DEBUG ? console.log(`Cursor isnt currently over any buttons\nFinding out what the default button is for this page`) : null;
                     let defaultButton = consts.pageButtons[onTop];
                 
                     // ok, find that button
                     let container = vars.containers.getByName(onTop);
                     if (!container) return 'Cant find container';
             
-                    console.log(`Looking for button with name: ${defaultButton}`);
+                    vars.DEBUG ? console.log(`Looking for button with name: ${defaultButton}`) : null;
                     let button = container.getByName(defaultButton);
                     if (!button) return 'Cant find button';
                 
@@ -1989,19 +2111,8 @@ var vars = {
                     // if we get here, we do indeed have an Arrow, Space/Enter or Esc up event
                     let key = _key.key;
                     if (key==='Escape') { // ESCAPE key is used to close several containers (HS,NG - both, gS)
-                        console.log(`%cEscaped pressed...`, 'color: #44b5cc');
-                        let onTop = vars.input.cursor.getCurrentlyOnTop();
-                        if (onTop==='highScoreTable') { // high score table visible, hide it
-                            console.log(`  > Hiding high score table`);
-                            // we have to figure out why the high score table is visible
-                            // was it due to looping?
-                            // was it after the player got a high score?
-                            // was it because the player specifically asked for the high score table? -> back to mainScreen
-                        } else if (onTop==='gamePlayingUI') {
-                            console.log(`  > Asking player if they want to go home (main screen)`);
-                        } else if (onTop==='scrollers') {
-
-                        };
+                        vars.input.cursor.escapeKeyPressed();
+                        _key.stopPropagation();
                         return true;
                     };
 
@@ -2100,6 +2211,7 @@ var vars = {
                     vars.containers.startIntroLoop(false);
                     // show the hiscore table and buttons
                     cV.show('highScoreTable', true);
+                    vars.game.scoreCard.animatePreviousNextButton();
                     vars.game.scoreCard.showHSTableButtons(true);
                     vars.game.scoreCard.showHSTableReplayButtons(true);
                     return true;
@@ -2255,15 +2367,28 @@ var vars = {
 
                 case 'close_HSTB': // close the high score table
                     vars.DEBUG ? console.log(` >>> Closing High Score Table`) : null;
-                    let cV = vars.containers;
-                    cV.show('highScoreTable', false);
-                    // if we paused to get here we need to 
-                    if (cV.pausedByUser) { cV.show('mainScreen', true);  cV.pausedByUser=false};
+
+                    // pull the buttons back in 
+                    let duration = 1;
+                    if (vars.game.scoreCard.totalPages>1) {
+                        vars.game.scoreCard.animatePreviousNextButton(false);
+                        duration = 500;
+                    };
                     
-                    // we can here from:   looping                    game play screen
-                    if (cV.looping) { cV.ignoreLoop=false; } else { cV.showNGOnFail(true); };
-                    scoreCard.showHSTableButtons(false);
-                    scoreCard.showHSTableReplayButtons(false);
+                    scene.tweens.addCounter({
+                        from: 0, to: 1,
+                        duration: duration,
+                        onComplete: ()=> {
+                            let cV = vars.containers;
+                            // we can here from:   looping                    game play screen
+                            if (cV.looping) { cV.ignoreLoop=false; } else { cV.showNGOnFail(true); };
+                            scoreCard.showHSTableButtons(false);
+                            scoreCard.showHSTableReplayButtons(false);
+                            cV.show('highScoreTable', false);
+                            // if we paused to get here we need to 
+                            if (cV.pausedByUser) { cV.show('mainScreen', true);  cV.pausedByUser=false};
+                        }
+                    });
                     return true;
                 break;
 
