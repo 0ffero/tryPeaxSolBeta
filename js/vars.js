@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 077.008',
+    revision: 'rev 082.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -74,6 +74,10 @@ var vars = {
         'Revision 076   - Added lS function to generate unlock id',
         'Revision 077   - Added animated buttons (prev/next) on high score page',
         'Revision 078   - Fixed minor bug when dealing with cursor keys',
+        'Revision 079   - The vanity screen was originally going to have a colour fade on the white parts of the logo. But, phones really dont like updating the hue every frame. So, its been replaced with a new shiny gold and silver logo :)',
+        'Revision 080   - Added the options screens main buttons to the list of availables so I can enable closing the options page with the escape key',
+        'Revision 081   - Escape key works on all pages apart from mainScreen.',
+        'Revision 082   - Left and right keys now works on all pages with multiple sub pages (unlockeds/unlocks, hs)',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -1691,16 +1695,24 @@ var vars = {
                 console.log(`%cEscaped pressed...`, 'color: #44b5cc');
                 let onTop = vars.input.cursor.getCurrentlyOnTop();
                 if (onTop==='highScoreTable') { // high score table visible, hide it
-                    console.log(`  > Hiding high score table`);
-                    // we have to figure out why the high score table is visible
-                    // was it due to looping?
-                    // was it after the player got a high score?
-                    // was it because the player specifically asked for the high score table? -> back to mainScreen
+                    vars.DEBUG ? console.log(`  > Hiding high score table`) : null;
+                    let gameObject = vars.containers.getByName(onTop).getByName('close_HSTB');
+                    vars.input.highScoreTableButtonClick(gameObject);
+                    return true;
                 } else if (onTop==='gamePlayingUI') {
                     console.log(`  > Asking player if they want to go home (main screen)`);
                 } else if (onTop.startsWith('scroller_')) {
                     console.log(`  > Hiding the scroller`);
+                    // this should be a check! TODO
+                    vars.scrollers.available.Rules.click(`SCRL_close`);
+                    return true;
+                } else if (onTop==='optionsScreen') {
+                    let gO = { name: 'options_close'};
+                    vars.input.optionsClick(gO);
+                    return true;
                 };
+
+                return false;
             },
 
             findTheNearestCardToTheClickedOnOne: (_cName,_delay=false)=> { // KEYBOARD: used when clicking on a
@@ -1955,6 +1967,16 @@ var vars = {
                             if (!nextButton.visible || !nextButton.alpha) return false;
                             vars.game.scoreCard.showHighScorePage(false);
                             return true;
+                        } else if (onTop==='optionsScreen') {
+                            // check which containers visible
+                            let uL = vars.game.unlockables;
+                            let ulContainers = uL.containers;
+                            if (ulContainers.options.visible && ulContainers.options.alpha) {
+                                uL.optionsShowPage(false);
+                            } else {
+                                uL.optionsShowPageULD(false);
+                            };
+                            return true;
                         };
                     break;
 
@@ -1965,6 +1987,16 @@ var vars = {
                             let nextButton = container.getByName('nextPage_HSTB');
                             if (!nextButton.visible || !nextButton.alpha) return false;
                             vars.game.scoreCard.showHighScorePage(true);
+                            return true;
+                        } else if (onTop==='optionsScreen') {
+                            // check which containers visible
+                            let uL = vars.game.unlockables;
+                            let ulContainers = uL.containers;
+                            if (ulContainers.options.visible && ulContainers.options.alpha) {
+                                uL.optionsShowPage(true);
+                            } else {
+                                uL.optionsShowPageULD(true);
+                            };
                             return true;
                         };
                     break;
@@ -2226,7 +2258,16 @@ var vars = {
                     return true;
                 };
 
-            }
+                if (gameObject.name==='MS_buy') {
+                    if (vars.localStorage.unlocked) { // game has been bought, give 2000UPs
+                        vars.game.unlockPoints += 2000;
+                        vars.game.unlockables.updateUIUnlockPoints();
+                    } else {
+                        vars.DEBUG ? console.log(`BUY button doesnt currently do anything. Itll eventually allow you to buy the game for £1.99`) : null;
+                    };
+                    return true;
+                };
+            };
 
             if (gameObject.name==='WD_enterName') { // WELL DONE SCREEN button
                 iV.enableInput(false,200);
@@ -3366,12 +3407,17 @@ var vars = {
 
             let y = cC.cY-50;
             let buttons = ['newGame','hiScores','options', 'buy'];
-            unlocked ? buttons.pop() : null;
             buttons.forEach((_key)=> {
                 let buttonBG = scene.add.image(cC.width*0.75, y, 'mainScreen', 'buttonBG').setName(`MS_${_key}`).setAlpha(0).setDepth(depth-1).setInteractive();
                 pageButtons[screenName].push(`MS_${_key}`);
                 vars.UI.tempUIObjects.push(buttonBG);
-                let buttonText = scene.add.image(cC.width*0.75, y, 'mainScreen', `${_key}Text`).setName(`MST_${_key}Text`).setAlpha(0).setDepth(depth);
+
+                let buttonText;
+                if (_key==='buy' && vars.localStorage.unlocked) {
+                    buttonText = scene.add.image(cC.width*0.75, y, 'mainScreen', `boughtText`).setName(`MST_boughtText`).setAlpha(0).setDepth(depth);
+                } else {
+                    buttonText = scene.add.image(cC.width*0.75, y, 'mainScreen', `${_key}Text`).setName(`MST_${_key}Text`).setAlpha(0).setDepth(depth);
+                };
                 vars.UI.tempUIObjects.push(buttonText);
                 
                 container.add([buttonBG,buttonText]);
@@ -3391,7 +3437,7 @@ var vars = {
                 container.setAlpha(0).setDepth(consts.depths.dailyBonus);
                 let bg = scene.add.image(cC.cX,cC.cY,'whitepixel').setScale(cC.width,cC.height).setTint(0x0).setAlpha(0.9).setName('dailyBonusBG').setInteractive();
                 let bonusImage = scene.add.image(cC.cX,cC.cY,'dailyBonusImage');
-                let bonusText = scene.add.bitmapText(cC.cX,cC.cY,'defaultFont','250 UPs',128,1).setName(`bonusTextBouncing`).setOrigin(0.5).setTint(consts.tints.orange);
+                let bonusText = scene.add.bitmapText(cC.cX,cC.cY,'defaultFont','250 UPs',128,1).setDropShadow(6,6).setName(`bonusTextBouncing`).setOrigin(0.5).setTint(consts.tints.orange);
 
                 container.add([bg,bonusImage,bonusText]);
 
@@ -3460,16 +3506,23 @@ var vars = {
             // currently KB is NOT supported! (too much stuff on the page)
             // get the loaded options
             let mO = vars.localStorage.options.music;
-            let container = scene.containers.optionsScreen;
+            let screenName = 'optionsScreen';
+            let container = scene.containers[screenName];
+
+            // set up page buttons
+            let iV = vars.input;
+            let pageButtons = iV.pageButtons;
+            pageButtons[screenName] = [];
 
             let cC = consts.canvas;
-            let optionsBG = scene.add.image(cC.cX,cC.cY,'optionsBG').setName('optionsBG');
+            let optionsBG = scene.add.image(cC.cX,cC.cY,'optionsBG').setName(screenName);
 
             container.add(optionsBG);
 
             // HEADERS
             let optionsHeader = scene.add.image(330,155,'ui','optionsHeader');
-            let unlockSwapButton = scene.add.image(805,155,'ui','changeUnlockTypeIcon').setName('unlockablesHeader_button').setInteractive();
+            let unlockSwapButton = scene.add.image(805,155,'ui','changeUnlockTypeIcon').setName('unlockablesHeader_button').setInteractive(); // we add this button after the play/on/off buttons
+            pageButtons[screenName].push('unlockablesHeader_button');
             unlockSwapButton.on('pointerup', vars.input.switchVisibleUnlocksContainer);
             let unlockablesHeader = scene.add.image(865,155,'ui','unlockablesHeader').setName('unlockablesHeader').setOrigin(0,0.5).setInteractive();
             unlockablesHeader.on('pointerup', vars.input.switchVisibleUnlocksContainer);
@@ -3490,10 +3543,14 @@ var vars = {
             for (let t=0; t<6; t++) {
                 let alphaYes = mO[`track${t+1}`] ? 1 : 0;
                 let alphaNo = alphaYes ? 0 : 1;
-                let play = scene.add.image(x-396, y + t*yInc, 'ui', 'playTrackIcon').setAlpha(1).setName(`options_track${t+1}_play`).setInteractive();
+                let pButtonName = `options_track${t+1}_play`;
+                let play = scene.add.image(x-396, y + t*yInc, 'ui', 'playTrackIcon').setAlpha(1).setName(pButtonName).setInteractive();
+                pageButtons[screenName].push(pButtonName);
                 let trackText = scene.add.image(x-205, y + t*yInc, 'ui', `track${t+1}Header`).setName(`options_track${t+1}_header`);
                 let off = scene.add.image(x, y + (t*yInc),'ui','noIcon').setAlpha(alphaNo).setName(`options_track${t+1}_off`).setInteractive();
                 let on = scene.add.image(x, y + (t*yInc),'ui','yesIcon').setAlpha(alphaYes).setName(`options_track${t+1}_on`).setInteractive();
+                // we only add one of these buttons
+                pageButtons[screenName].push(`options_track${t+1}_on`);
                 group.addMultiple([off,on]);
                 container.add([play,off,on,trackText]);
                 alphaYes ? enabled.push(t+1) : null;
@@ -3526,6 +3583,7 @@ var vars = {
 
             // CLOSE OPTIONS BUTTON
             let close = scene.add.image(cC.width-10, cC.height-10, 'ui', 'closeOptionsIcon').setOrigin(1,1).setName('options_close').setInteractive();
+            pageButtons[screenName].push('options_close');
             container.add(close);
 
             // update this container to show current volume

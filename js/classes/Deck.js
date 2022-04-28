@@ -96,8 +96,7 @@ let Deck = class {
         let duration = 250;
         let totalDuration = duration * cardCount;
         scene.tweens.addCounter({
-            from: 0,
-            to: 1,
+            from: 0, to: 1,
             duration: totalDuration,
             onComplete: ()=> {
                 let score = this.playerScore; let time = vars.game.deal.currentTime;

@@ -40,6 +40,26 @@
 				"h": 133
 			}
 		},
+		"boughtText": {
+			"frame": {
+				"x": 5,
+				"y": 1235,
+				"w": 441,
+				"h": 109
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 441,
+				"h": 109
+			},
+			"sourceSize": {
+				"w": 441,
+				"h": 109
+			}
+		},
 		"buyText": {
 			"frame": {
 				"x": 467,

@@ -78,7 +78,7 @@ const consts = {
 
     pageButtons: {
         mainScreen: 'MS_newGame', NGOptions: 'NG_NEWDEAL_button_ui', playerLose: 'NG_NEWDEAL_Button_ui', wellDone: 'WD_enterName',
-        scrollers: 'SCRL_x1', highScoreTable: 'times_HSTB', 
+        scrollers: 'SCRL_x1', highScoreTable: 'times_HSTB', optionsScreen: 'unlockablesHeader_button'
     },
 
     timeRadix: 32,

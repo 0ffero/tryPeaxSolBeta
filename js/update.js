@@ -85,7 +85,10 @@ vars.update = {
         let hue = _hue/360;
         let colour = Phaser.Display.Color.HSLToColor(hue,1,0.5).color;
         let container = scene.containers.mainScreen;
-        ['newGame','hiScores','options', 'buy'].forEach((_key)=> { container.getByName(`MST_${_key}Text`).setTint(colour); });
+        let buttonNames =  ['newGame','hiScores','options'];
+        
+        !vars.localStorage.unlocked ? buttonNames.push('buy') : null;
+        buttonNames.forEach((_key)=> { container.getByName(`MST_${_key}Text`).setTint(colour); });
         return;
     },
 
