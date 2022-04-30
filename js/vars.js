@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 084.008',
+    revision: 'rev 085.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -80,6 +80,7 @@ var vars = {
         'Revision 082   - Left and right keys now works on all pages with multiple sub pages (unlockeds/unlocks, hs)',
         'Revision 083   - Added grey scale shader for the give 2k button. Integrated into the initial main screen UP count',
         'Revision 084   - Modified the UP animation (mainScren) to allow for the give2k to animate to the new UP count',
+        'Revision 085   - Fixed a bug introduced by now having an unlocked version of the game (grey scale shader was being called on a button that might not exist',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -1295,6 +1296,7 @@ var vars = {
         },
 
         gimme2KGreyToColour: ()=> {
+            if (!vars.localStorage.unlocked) return false;
             let p = vars.shaders.getGrayScalePipeLine();
             let c = vars.containers.getByName('mainScreen');
             let i = c.getByName('MST_boughtText');
@@ -1308,6 +1310,7 @@ var vars = {
         },
         
         gimme2KColourToGrey: ()=> {
+            if (!vars.localStorage.unlocked) return false;
             let p = vars.shaders.getGrayScalePipeLine();
             let c = vars.containers.getByName('mainScreen');
             let i = c.getByName('MST_boughtText');
