@@ -160,11 +160,11 @@ let Unlockables = class {
         this.winHighlight    = this.scene.add.image(this.cC.cX,this.cC.cY,'unlockUI','winHighlight').setDepth(5).setName(`winHighlight`);
 
         let fS = 20; let fF = 'Consolas';
-        this.unlockName = this.scene.add.text(this.cC.cX, this.cC.cY-140, '???', { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setName(`unlockName`);
+        this.unlockName = this.scene.add.text(this.cC.cX, this.cC.cY-150, '???', { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setName(`unlockName`);
         this.unlockName.setStroke(consts.htmlColours.blueDark, 2).setOrigin(0.5).setDepth(4).setData({ actualID: null });
         this.unlockName.setShadow(2, 2, "#333333", 2, true, true);
         
-        this.typeTextObject = this.scene.add.text(this.cC.cX, this.cC.cY+140, '???', { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setName(`unlockTypeText`);
+        this.typeTextObject = this.scene.add.text(this.cC.cX, this.cC.cY+150, '???', { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setName(`unlockTypeText`);
         this.typeTextObject.setStroke(consts.htmlColours.blueDark, 2).setOrigin(0.5).setDepth(4);
         this.typeTextObject.setShadow(2, 2, "#333333", 2, true, true);
 
@@ -180,14 +180,15 @@ let Unlockables = class {
         let container2 = this.containers.unlocked;
 
         // OTHER BUTTONS
-        let prev = this.scene.add.image(215,615,'ui','previousIcon').setName(`UNL_previous`).setInteractive();
-        let pageText = this.scene.add.bitmapText(495, 613,'defaultFont',`PAGE ${this.currentPage+1} of ${this.totalPages}`,48).setOrigin(0.5).setDepth(2);
-        let next = this.scene.add.image(785,615,'ui','nextIcon').setName(`UNL_next`).setInteractive();
+        // UNLOCKABLES
+        let prev = this.scene.add.image(235,615,'ui','previousIcon').setName(`UNL_previous`).setInteractive();
+        let pageText = this.scene.add.bitmapText(515, 613,'defaultFont',`PAGE ${this.currentPage+1} of ${this.totalPages}`,48).setOrigin(0.5).setDepth(2);
+        let next = this.scene.add.image(805,615,'ui','nextIcon').setName(`UNL_next`).setInteractive();
         container.add([prev,next,pageText]);
-
-        let prevULD = this.scene.add.image(100,655,'ui','previousIcon').setName(`UNLD_previous`).setInteractive();
-        let pageTextULD = this.scene.add.bitmapText(380, 653,'defaultFont',`PAGE 0 of 0`,48).setOrigin(0.5).setDepth(2);
-        let nextULD = this.scene.add.image(670,655,'ui','nextIcon').setName(`UNLD_next`).setInteractive();
+        // UNLOCKED
+        let prevULD = this.scene.add.image(100,725,'ui','previousIcon').setName(`UNLD_previous`).setInteractive();
+        let pageTextULD = this.scene.add.bitmapText(380, 723,'defaultFont',`PAGE 0 of 0`,48).setOrigin(0.5).setDepth(2);
+        let nextULD = this.scene.add.image(670,725,'ui','nextIcon').setName(`UNLD_next`).setInteractive();
         container2.add([prevULD,pageTextULD,nextULD]);
         
         
@@ -220,8 +221,8 @@ let Unlockables = class {
 
 
         // position the containers
-        container.setPosition(735,325);
-        container2.setPosition(875,265);
+        container.setPosition(625,325);
+        container2.setPosition(765,190);
 
         // set the min count
         this.optionsMinCount = container.length;
@@ -563,7 +564,7 @@ let Unlockables = class {
         // unlocked vars
         this.ULd = {
             xMin: 60, x: 60, xInc: 200,
-            yMin: 60, y: 60, yInc: 280,
+            yMin: 60, y: 60, yInc: 300,
             tintWidth: 154, tintHeight: 234,
             unlockedCount: 0, pages: 0, currentPage: 0,
             maxPerPage: 10
@@ -769,10 +770,11 @@ let Unlockables = class {
     showRandomRollButton() { // SHOW RANDOM ROLL BUTTON IF PLAYER HAS ENOUGH UPs (and vice versa)
         if (vars.game.unlockPoints<consts.unlockPoints.randomRoll) {
             this.randomRollText.setFrame('randomRollUnavailableText').disableInteractive();
-            this.tweens.randomRollButton.paused=true;
+            this.tweens.randomRollButton.pause();
+            this.randomRollText.setScale(1);
         } else {
             this.randomRollText.setFrame('randomRollText').setInteractive();
-            this.tweens.randomRollButton.paused=false;
+            this.tweens.randomRollButton.resume();
         };
     }
 
@@ -796,7 +798,10 @@ let Unlockables = class {
         };
 
         let frame = optionsVisible ? 'unlockedHeader' : 'unlockablesHeader';
-        scene.containers.optionsScreen.getByName('unlockablesHeader').setFrame(frame);
+        let container = scene.containers.optionsScreen;
+        container.getByName('unlockablesHeader').setFrame(frame);
+        frame = optionsVisible ? 'optUnlockedButton' : 'optLockedButton'
+        container.getByName('unlockablesHeader_button').setFrame(frame);
 
         scene.tweens.add({ // hide the currently visible container
             targets: c1,
@@ -887,7 +892,6 @@ let Unlockables = class {
         if (_points>available) return false;
 
         gV.unlockPoints -=_points;
-        this.showRandomRollButton(); // this will show or hide the button based on users updated unlock points
         
         vars.localStorage.updateUnlockPoints(); // update the stored var
 
@@ -991,7 +995,14 @@ let Unlockables = class {
             if (type==='TINT') {
                 text=entry5.name.replace('tint','');
             } else if (type==='CARD SET') {
-                text=entry5.name.replace('cS','').replaceAll('_', '\n');
+                let e5Name = entry5.name;
+                text = e5Name.replace('cS','').replaceAll('_', '\n');
+                if (text.includes('SOS')) {
+                    text = 'Satin ' + text;
+                    text = text.replace('SOS', 'Original Set');
+                } else if (text.includes('OS')) {
+                    text = text.replace('OS', 'Original Set');
+                };
             } else { // UNKNOWN TYPE!
                 text='???';
             };

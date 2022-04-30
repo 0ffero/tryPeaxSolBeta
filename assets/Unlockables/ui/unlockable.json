@@ -44,23 +44,23 @@
 			"frame": {
 				"x": 268,
 				"y": 253,
-				"w": 128,
-				"h": 46
+				"w": 121,
+				"h": 39
 			},
 			"rotated": false,
 			"trimmed": false,
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 128,
-				"h": 46
+				"w": 121,
+				"h": 39
 			},
 			"sourceSize": {
-				"w": 128,
-				"h": 46
+				"w": 121,
+				"h": 39
 			}
 		},
-		"randomRollUnavailable": {
+		"randomRollUnavailableText": {
 			"frame": {
 				"x": 398,
 				"y": 253,

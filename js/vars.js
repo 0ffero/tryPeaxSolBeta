@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 082.008',
+    revision: 'rev 084.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -78,6 +78,8 @@ var vars = {
         'Revision 080   - Added the options screens main buttons to the list of availables so I can enable closing the options page with the escape key',
         'Revision 081   - Escape key works on all pages apart from mainScreen.',
         'Revision 082   - Left and right keys now works on all pages with multiple sub pages (unlockeds/unlocks, hs)',
+        'Revision 083   - Added grey scale shader for the give 2k button. Integrated into the initial main screen UP count',
+        'Revision 084   - Modified the UP animation (mainScren) to allow for the give2k to animate to the new UP count',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -444,6 +446,8 @@ var vars = {
         shaders: {
             load: ()=> {
                 scene.load.glsl('fireworks', `shaders/fireworks/fireworks.frag`);
+
+                scene.load.plugin('rexgrayscalepipelineplugin', 'plugins/grayscalepipelineplugin.min.js', true);
             }
         },
 
@@ -1232,21 +1236,28 @@ var vars = {
             })
         },
 
-        mainPageUPCount: ()=> {
+        mainPageUPCount: (_init=true)=> {
             let unlockPoints = vars.game.unlockPoints;
             if (!unlockPoints) return false;
 
+            let fromTo = [0,unlockPoints];
+            if (!_init) { // we need the current count visible on main screen
+                let currentUPCount = ~~(scene.containers.mainScreen.getByName(`playersUPCountMainScreen`).text.split(' ')[0]);
+                fromTo = [currentUPCount,unlockPoints];
+            };
             // player has UP coins, start the count up
             scene.tweens.addCounter({
-                from: 0, to: unlockPoints,
+                from: fromTo[0], to: fromTo[1],
                 duration: 2500,
-                ease: 'Quad.easeIn',
+                ease: 'Expo',
                 // update the UP count
                 onUpdate: (_t,_v)=> {
                     let currentCount = ~~_v.value;
                     if (~~_v.value>100000) { currentCount = '>99999'; };
                     scene.containers.mainScreen.getByName(`playersUPCountMainScreen`).setText(`${currentCount} Unlock Points`);
-                }
+                },
+                onStart: vars.anims.gimme2KColourToGrey,
+                onComplete: vars.anims.gimme2KGreyToColour
             });
         },
 
@@ -1279,6 +1290,32 @@ var vars = {
                     });
                 } else {
                     console.error(`Unknown object (${_o.name}) !`);
+                }
+            });
+        },
+
+        gimme2KGreyToColour: ()=> {
+            let p = vars.shaders.getGrayScalePipeLine();
+            let c = vars.containers.getByName('mainScreen');
+            let i = c.getByName('MST_boughtText');
+            scene.tweens.addCounter({
+                from: 1, to: 0,
+                duration: 1000,
+                onUpdate: (_t,_v)=> {
+                    p.get(i)[0].setIntensity(_v.value);
+                }
+            });
+        },
+        
+        gimme2KColourToGrey: ()=> {
+            let p = vars.shaders.getGrayScalePipeLine();
+            let c = vars.containers.getByName('mainScreen');
+            let i = c.getByName('MST_boughtText');
+            scene.tweens.addCounter({
+                from: 0, to: 1,
+                duration: 250,
+                onUpdate: (_t,_v)=> {
+                    p.get(i)[0].setIntensity(_v.value);
                 }
             });
         }
@@ -2261,6 +2298,8 @@ var vars = {
                 if (gameObject.name==='MS_buy') {
                     if (vars.localStorage.unlocked) { // game has been bought, give 2000UPs
                         vars.game.unlockPoints += 2000;
+                        vars.localStorage.updateUnlockPoints();
+                        vars.game.unlockables.showRandomRollButton();
                         vars.game.unlockables.updateUIUnlockPoints();
                     } else {
                         vars.DEBUG ? console.log(`BUY button doesnt currently do anything. Itll eventually allow you to buy the game for £1.99`) : null;
@@ -3216,6 +3255,9 @@ var vars = {
 
     shaders: {
         available: [],
+        greyScales: { // contains a list of buttons in the format spriteName: { object: phaserObject }
+
+        },
         fireworksRes: 1/8, // this is the resolution of the shader. Low end phones should be 0.1 -> high end PCs at 1 (=1/4*1080p -> 1*1080p)
 
         init: ()=> {
@@ -3236,6 +3278,10 @@ var vars = {
             let res = 1/vars.shaders.fireworksRes;
             let fireworks = scene.add.image(cC.cX,cC.cY,'fireworks').setScale(res);
             return fireworks;
+        },
+
+        getGrayScalePipeLine: ()=> {
+            return scene.plugins.get('rexgrayscalepipelineplugin');
         }
     },
 
@@ -3415,6 +3461,7 @@ var vars = {
                 let buttonText;
                 if (_key==='buy' && vars.localStorage.unlocked) {
                     buttonText = scene.add.image(cC.width*0.75, y, 'mainScreen', `boughtText`).setName(`MST_boughtText`).setAlpha(0).setDepth(depth);
+                    vars.shaders.getGrayScalePipeLine().add(buttonText, { intensity: 1 });
                 } else {
                     buttonText = scene.add.image(cC.width*0.75, y, 'mainScreen', `${_key}Text`).setName(`MST_${_key}Text`).setAlpha(0).setDepth(depth);
                 };
@@ -3503,7 +3550,6 @@ var vars = {
         },
 
         initOptionsScreen: ()=> {
-            // currently KB is NOT supported! (too much stuff on the page)
             // get the loaded options
             let mO = vars.localStorage.options.music;
             let screenName = 'optionsScreen';
@@ -3520,19 +3566,16 @@ var vars = {
             container.add(optionsBG);
 
             // HEADERS
-            let optionsHeader = scene.add.image(330,155,'ui','optionsHeader');
-            let unlockSwapButton = scene.add.image(805,155,'ui','changeUnlockTypeIcon').setName('unlockablesHeader_button').setInteractive(); // we add this button after the play/on/off buttons
-            pageButtons[screenName].push('unlockablesHeader_button');
-            unlockSwapButton.on('pointerup', vars.input.switchVisibleUnlocksContainer);
-            let unlockablesHeader = scene.add.image(865,155,'ui','unlockablesHeader').setName('unlockablesHeader').setOrigin(0,0.5).setInteractive();
+            let optionsHeader = scene.add.image(330,170,'ui','optionsHeader');
+            let unlockablesHeader = scene.add.image(665,155,'ui','unlockablesHeader').setName('unlockablesHeader').setOrigin(0,0.5).setInteractive();
             unlockablesHeader.on('pointerup', vars.input.switchVisibleUnlocksContainer);
 
             let unlockPoints = vars.game.unlockPoints>99999 ? '>99999' : vars.game.unlockPoints;
-            let upCount = scene.add.bitmapText(cC.width-245, 155, 'defaultFont', unlockPoints, 48).setOrigin(1,0.5).setName(`optionsScreenUPCount`).setTint(0xFFBC00);
-            let coinImage = scene.add.image(cC.width-205, 155,'coins','gold').setName('UIOUPCoin').setScale(0.75);
+            let upCount = scene.add.bitmapText(cC.width-315, 155, 'defaultFont', unlockPoints, 48).setOrigin(1,0.5).setName(`optionsScreenUPCount`).setTint(0xFFBC00);
+            let coinImage = scene.add.image(cC.width-275, 155,'coins','gold').setName('UIOUPCoin').setScale(0.75);
 
             let musicHeader = scene.add.image(315,400,'ui','musicHeader');
-            container.add([optionsHeader,unlockablesHeader,unlockSwapButton,musicHeader,upCount,coinImage]);
+            container.add([optionsHeader,unlockablesHeader,musicHeader,upCount,coinImage]);
 
             // MUSIC TRACKS SECTION
             let x = 530; let y = 510;
@@ -3581,10 +3624,13 @@ var vars = {
             playingBar.setCrop(0,0,0,wh[1]); // crop it back to 0 px wide
             container.add(playingBar);
 
-            // CLOSE OPTIONS BUTTON
-            let close = scene.add.image(cC.width-10, cC.height-10, 'ui', 'closeOptionsIcon').setOrigin(1,1).setName('options_close').setInteractive();
-            pageButtons[screenName].push('options_close');
-            container.add(close);
+            // FAR RIGHT OPTION BUTTONS
+            let unlockSwapButton = scene.add.image(cC.width-10,125,'ui','optLockedButton').setOrigin(1,0).setName('unlockablesHeader_button').setInteractive(); // we add this button after the play/on/off buttons
+            pageButtons[screenName].push('unlockablesHeader_button');
+            unlockSwapButton.on('pointerup', vars.input.switchVisibleUnlocksContainer);
+            let close = scene.add.image(cC.width-10, cC.height-55, 'ui', 'optExitButton').setOrigin(1,1).setName('options_close').setInteractive();
+            pageButtons[screenName].push('options_close','');
+            container.add([close,unlockSwapButton]);
 
             // update this container to show current volume
             vars.UI.updateVolume();

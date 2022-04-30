@@ -140,6 +140,26 @@
 				"h": 68
 			}
 		},
+		"changeUnlockTypeIconULD": {
+			"frame": {
+				"x": 2116,
+				"y": 493,
+				"w": 68,
+				"h": 68
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 68,
+				"h": 68
+			},
+			"sourceSize": {
+				"w": 68,
+				"h": 68
+			}
+		},
 		"closeOptionsIcon": {
 			"frame": {
 				"x": 286,
@@ -398,6 +418,66 @@
 			"sourceSize": {
 				"w": 381,
 				"h": 45
+			}
+		},
+		"optExitButton": {
+			"frame": {
+				"x": 1894,
+				"y": 1223,
+				"w": 188,
+				"h": 68
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 188,
+				"h": 68
+			},
+			"sourceSize": {
+				"w": 188,
+				"h": 68
+			}
+		},
+		"optLockedButton": {
+			"frame": {
+				"x": 1894,
+				"y": 1305,
+				"w": 188,
+				"h": 68
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 188,
+				"h": 68
+			},
+			"sourceSize": {
+				"w": 188,
+				"h": 68
+			}
+		},
+		"optUnlockedButton": {
+			"frame": {
+				"x": 2112,
+				"y": 1223,
+				"w": 188,
+				"h": 68
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 188,
+				"h": 68
+			},
+			"sourceSize": {
+				"w": 188,
+				"h": 68
 			}
 		},
 		"optionsIcon": {
@@ -744,7 +824,7 @@
 			"frame": {
 				"x": 525,
 				"y": 1223,
-				"w": 645,
+				"w": 446,
 				"h": 45
 			},
 			"rotated": false,
@@ -752,11 +832,11 @@
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 645,
+				"w": 446,
 				"h": 45
 			},
 			"sourceSize": {
-				"w": 645,
+				"w": 446,
 				"h": 45
 			}
 		},
@@ -782,9 +862,9 @@
 		},
 		"unlockedHeader": {
 			"frame": {
-				"x": 1172,
+				"x": 980,
 				"y": 1223,
-				"w": 477,
+				"w": 333,
 				"h": 45
 			},
 			"rotated": false,
@@ -792,11 +872,11 @@
 			"spriteSourceSize": {
 				"x": 0,
 				"y": 0,
-				"w": 477,
+				"w": 333,
 				"h": 45
 			},
 			"sourceSize": {
-				"w": 477,
+				"w": 333,
 				"h": 45
 			}
 		},
