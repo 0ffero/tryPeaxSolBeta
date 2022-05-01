@@ -2,6 +2,7 @@
 var vars = {
     version: 0.99,
     revision: 'rev 087.008',
+
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
