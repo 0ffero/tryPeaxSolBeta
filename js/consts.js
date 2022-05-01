@@ -41,6 +41,7 @@ const consts = {
         options:                150,
         unlockedCardSpread:     170,
         scroller:               180,
+        difficultyWarning:      190,
         splashScreen:           200,
         dailyBonus:             300,
         debug:                  999
@@ -71,6 +72,7 @@ const consts = {
 
     htmlColours: {
         orange: '#FFBC00',
+        oranger: '#FF3000', // only used to for warnings text
         blue: '#0080EA',
         blueDark: '#0163B4',
         blueLight: '#7DC5FF',
@@ -88,7 +90,8 @@ const consts = {
         blueDark: 0x0163B4,
         blueLight: 0x7DC5FF,
         highScores: 0x0F78D1,
-        orange: 0xFFBC00
+        orange: 0xFFBC00,
+        oranger: 0xFF3000
     },
 
     unlockPoints: {

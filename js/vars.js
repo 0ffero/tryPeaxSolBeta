@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 084.008',
+    revision: 'rev 087.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -80,6 +80,8 @@ var vars = {
         'Revision 082   - Left and right keys now works on all pages with multiple sub pages (unlockeds/unlocks, hs)',
         'Revision 083   - Added grey scale shader for the give 2k button. Integrated into the initial main screen UP count',
         'Revision 084   - Modified the UP animation (mainScren) to allow for the give2k to animate to the new UP count',
+        'Revision 085   - Fixed a bug introduced by now having an unlocked version of the game (grey scale shader was being called on a button that might not exist',
+        'Revision 086, 087  - Difficulty warning is completed. Just need to pop up at the appropriate times (such as when selecting/unlocking an OS cS). New awesome sound effect when the message is "typing"',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -290,6 +292,7 @@ var vars = {
             break;
             case 'GAMESCREENS':
                 vars.UI.initMainScreen(); // also initialises PARTICLES
+                vars.UI.initDifficultyWarning();
                 vars.UI.initGameScreen();
                 vars.UI.initOptionsScreen();
             break;
@@ -387,6 +390,7 @@ var vars = {
                 aV.available.shuffle = ['shuffle1','shuffle2'];
 
                 scene.load.audio('applause', `${folder}/applause.ogg`);
+                scene.load.audio('letterShow', `${folder}/letterShow.ogg`);
 
                 // music
                 folder='music';
@@ -539,6 +543,8 @@ var vars = {
             scene.containers.bonusPoints = scene.add.container().setName('bonusPoints');
             scene.containers.bonusPoints.setDepth(depths.bonusPointsContainier).setVisible(false).setAlpha(0);
             
+            scene.containers.difficultyWarning = scene.add.container().setName('difficultyWarning').setDepth(depths.difficultyWarning);
+            scene.containers.difficultyWarningCardSet = scene.add.container().setName('difficultyWarningCardSet').setDepth(depths.difficultyWarning+1);
 
             scene.containers.unlockedCardSpread = scene.add.container().setName('unlockedCardSpread').setDepth(depths.unlockedCardSpread).setAlpha(0).setVisible(false);
         },
@@ -1295,6 +1301,7 @@ var vars = {
         },
 
         gimme2KGreyToColour: ()=> {
+            if (!vars.localStorage.unlocked) return false;
             let p = vars.shaders.getGrayScalePipeLine();
             let c = vars.containers.getByName('mainScreen');
             let i = c.getByName('MST_boughtText');
@@ -1308,6 +1315,7 @@ var vars = {
         },
         
         gimme2KColourToGrey: ()=> {
+            if (!vars.localStorage.unlocked) return false;
             let p = vars.shaders.getGrayScalePipeLine();
             let c = vars.containers.getByName('mainScreen');
             let i = c.getByName('MST_boughtText');
@@ -3296,6 +3304,22 @@ var vars = {
 
         },
 
+        initDifficultyWarning: ()=> {
+            let cC = consts.canvas;
+            let cT = consts.tints;
+            let bg = scene.add.image(cC.cX,cC.cY,'whitePixel').setTint(0x0).setScale(cC.width, cC.height).setAlpha(0.85);
+            let msg = 'Using this card set will\ngive you a 10% increase\nin score and Unlock Points!';
+            let warningMessage = scene.add.bitmapText(cC.cX, cC.cY+50,'defaultFont',msg,96,1).setTint(cT.orange).setOrigin(0.5,0).setName('warningMessage');
+
+            let difficultyRating = 'Difficulty Rating: HARD';
+            let difficultyMessage = scene.add.bitmapText(cC.cX, cC.height*0.85,'defaultFont',difficultyRating,96,1).setName(`difficultyMessage`).setTint(cT.oranger).setOrigin(0.5,0).setAlpha(0);
+
+            let container = vars.containers.getByName('difficultyWarning');
+            container.add([bg,warningMessage,difficultyMessage]);
+
+            container.setAlpha(0).setVisible(false);
+        },
+
         initGameScreen() {
             // main screen keyboard input has already been implemented!
             let cC = consts.canvas;
@@ -3666,6 +3690,57 @@ var vars = {
 
         initWellDone: null, // well done is built every time. see buildWellDone, below
 
+        addCardSetToDifficultyWarning: ()=> {
+            let container = vars.containers.getByName('difficultyWarningCardSet');
+            let x = 82; let xInc=132; let y = 90;
+
+            let cardNumber = 0;
+            ['C','D','S','H'].forEach((_suit)=> {
+                ['A',2,3,4,5,6,7,8,9,10,'J','Q','K'].forEach((_value)=> {
+                    let card = scene.add.image(x,y,'cards',`${_value}${_suit}`).setOrigin(0).setAlpha(1);
+                    container.add(card);
+                    x+=xInc; cardNumber++;
+                });
+                x=82; y+=70;
+            });
+
+            // this functions is called with the express function to pre populate the page before showing it.. ie show it
+            vars.UI.typeWarningText();
+        },
+        removeCardsFromDifficultyWarning: ()=> { // when called we are destroying everything in the card set container as well as resetting some alphas
+            let cV = vars.containers;
+            let container = cV.getByName('difficultyWarningCardSet');
+            container.getAll().forEach((_c)=> { _c.destroy(); });
+
+            container = cV.getByName('difficultyWarning');
+            container.getByName('difficultyMessage').setAlpha(0);
+        },
+        typeWarningText: ()=> {
+            let container = vars.containers.getByName('difficultyWarning');
+
+            let wM = container.getByName('warningMessage'); // get the object
+            let wMText = wM.text.split(''); // the text of the object
+            wM.text=''; // empty out the message
+
+            // and redraw each characters one by one
+            let delay = 0; let delayPerCharacter=50; // 20 characters per second
+            while (wMText.length) {
+                let letter = wMText.shift();
+                scene.tweens.addCounter({
+                    from: 0, to: 1, delay: delay, duration: 50,
+                    onComplete: ()=> { wM.setText(`${wM.text}${letter}`); letter!==' ' ? vars.audio.playSound('letterShow'):null; } // push the letter back into the text object
+                });
+                delay+=delayPerCharacter;
+            };
+
+            // after the text has been typed, fade in the difficulty text
+            let difficultyMessage = container.getByName('difficultyMessage');
+            scene.tweens.add({
+                targets: difficultyMessage,
+                alpha: 1, delay: delay, duration: 1000,
+                onComplete: ()=> { vars.input.enableInput(true); }
+            })
+        },
 
         beginMainScreenLoop: ()=> {
             // start looping & enable card suit particles
@@ -3984,6 +4059,16 @@ var vars = {
                 x+=xInc;
                 delay+=delayInc;
             });
+        },
+
+        showDifficultyWarning: (_show=true)=> {
+            vars.input.enableInput(false);
+            let cV = vars.containers;
+            cV.show('difficultyWarning',_show);
+            cV.show('difficultyWarningCardSet',_show);
+
+            _show ? vars.UI.addCardSetToDifficultyWarning() : vars.UI.removeCardsFromDifficultyWarning();
+            // the animation to type the messages is called after the cards have been shown
         },
 
         showForegroundBarrier: (_show=true)=> {
