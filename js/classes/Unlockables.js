@@ -690,26 +690,32 @@ let Unlockables = class {
                 
                 // draw the image of the tint
                 let cost = consts.unlockPoints.tint;
-                let tintImage = this.scene.add.image(x,y,'whitePixel').setTint(tint).setData({ delete: true, moving: false }).setName(tintName).setOrigin(0,0).setScale(buttonWidth,imageHeight).setVisible(visible);
+                let tintImage = this.scene.add.image(x,y,'whitePixel').setTint(tint).setData({ delete: true, moving: false, tintAsInt: tint, unlockRRName: `tint${_tint[0]}` }).setName(tintName).setOrigin(0,0).setScale(buttonWidth,imageHeight).setVisible(visible);
                 imageSet[tintName].objects = [tintImage];
-                let button = this.scene.add.image(x,y+imageHeight,'whitePixel').setData({ delete: true, cost: cost }).setName(`unlock_tint_${tintString}`).setAlpha(0.7).setVisible(visible).setScale(buttonWidth,90).setOrigin(0,1).setTint(0x0).setInteractive();
+                let button = this.scene.add.image(x,y+imageHeight,'whitePixel').setData({ delete: true, cost: cost, tintAsInt: tint, unlockRRName: `tint${_tint[0]}` }).setName(`unlock_tint_${tintString}`).setAlpha(0.7).setVisible(visible).setScale(buttonWidth,90).setOrigin(0,1).setTint(0x0).setInteractive();
 
                 let costText = this.scene.add.text(x+buttonWidth/2,y+imageHeight-50,`${cost} UPs`, { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setData({ delete: true }).setOrigin(0.5,1).setVisible(visible).setStroke(consts.htmlColours.blueDark, 2).setShadow(2, 2, "#333333", 2, true, true);
                 let buttonText = this.scene.add.text(x+buttonWidth/2,y+imageHeight-12,`TINT: ${tintString.toUpperCase()}`, { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setData({ delete: true }).setOrigin(0.5,1).setVisible(visible);
                 buttonText.setStroke(consts.htmlColours.blueDark, 2);
                 buttonText.setShadow(2, 2, "#333333", 2, true, true);
 
-                let unlockIcon = this.scene.add.image(x+buttonWidth,y+7,'unlockUI','unlockIcon').setData({ delete: true, cost: cost }).setName(`unlock_tintUI_${tintString}`).setVisible(visible).setOrigin(1,0).setInteractive();
+                let unlockIcon = this.scene.add.image(x+buttonWidth,y+7,'unlockUI','unlockIcon').setData({ delete: true, cost: cost, tintAsInt: tint, unlockRRName: `tint${_tint[0]}` }).setName(`unlock_tintUI_${tintString}`).setVisible(visible).setOrigin(1,0).setInteractive();
 
                 imageSet[tintName].objects.push(button,buttonText,unlockIcon, costText);
                 container.add([tintImage,button,buttonText,unlockIcon,costText]);
-            } else { //  // this TINT HAS been unlocked
+            } else { // this TINT HAS been unlocked
                 vars.DEBUG ? console.log(`%cUnlocked ${_tint}`,`${consts.console.defaults} #${_tint[0]}`) : null;
-                let tintUnlocked = this.scene.add.image(this.ULd.x, this.ULd.y,'whitePixel').setOrigin(1,0).setTint(_tint[3]).setName(`TU_${_tint[0]}`).setScale(this.ULd.tintWidth,this.ULd.tintHeight).setInteractive();
+                let tintString = _tint[0];
+                let tintUnlocked = this.scene.add.image(this.ULd.x, this.ULd.y,'whitePixel').setOrigin(1,0).setTint(_tint[3]).setName(`TU_${tintString}`).setScale(this.ULd.tintWidth,this.ULd.tintHeight).setInteractive();
                 let tintFG = this.scene.add.image(this.ULd.x, this.ULd.y,'unlockUI','unlockedTintFG').setOrigin(1,0);
+                let tintText = this.scene.add.bitmapText(this.ULd.x-80,this.ULd.y+10,'defaultFontSmall',`TINT\n${tintString}`,20,1).setLetterSpacing(5).setName(`ulName_${tintString}`).setOrigin(0.5,0);
                 tintUnlocked.on('pointerup', this.click, tintUnlocked);
                 let page = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage);
-                page ? tintUnlocked.setAlpha(0).setVisible(false) : null;
+                if (page) {
+                    tintUnlocked.setAlpha(0).setVisible(false);
+                    tintText.setAlpha(0).setVisible(false);
+                    tintFG.setAlpha(0).setVisible(false);
+                };
                 page+1 > this.ULd.pages ? this.ULd.pages=page+1:null;
                 console.log(`Adding tint (${_tint[0]}) to page ${page}`);
 
@@ -722,8 +728,9 @@ let Unlockables = class {
 
                 tintUnlocked.setData({ page: page, delete: true });
                 tintFG.setData({ page: page, delete: true });
+                tintText.setData({ page: page, delete: true })
                 this.ULd.unlockedCount++;
-                containerUL.add([tintUnlocked,tintFG]);
+                containerUL.add([tintUnlocked,tintFG,tintText]);
 
                 // increase x
                 this.ULd.x+this.ULd.xInc<this.ULd.xInc*5+this.ULd.xMin ? this.ULd.x += this.ULd.xInc : this.ULd.x=this.ULd.xMin;
@@ -869,12 +876,18 @@ let Unlockables = class {
 
         // if we get here the player has enough points to unlock this
         this.useUnlockPoints(cost); // use the required amount of unlock points
-
+        // save it
+        if (_type==='tint') {
+            // SAVE the tint
+            vars.game.unlockables.unlockRandomRoll(false,`tint${uName}`);
+        } else if (_type==='cardSet') { // unlock is a cardSet
+            debugger;
+        };
         // do unlock animation
         // the object we pass is the unlock image (not whatever clicked on as that will be the unlock icon of background - NOT the unlockable)
         let unlockable = `${_type}_${uName}`;
-        debugger; // make sure were grabbing the right object here
         let uObject = this.containers.options.getByName(unlockable);
+        
         this.animatedUnlock(uObject);
     }
 
@@ -1096,9 +1109,10 @@ let Unlockables = class {
         });
     }
 
-    unlockRandomRoll() { // AFTER HIDING NOT WONs WE SAVE THE UNLOCKABLE AS UNLOCKED, REMOVE IT FROM THE unlockKeys,available and unlockableSet
+    unlockRandomRoll(_rR=true,_ulName=null) { // AFTER HIDING NOT WONs WE SAVE THE UNLOCKABLE AS UNLOCKED, REMOVE IT FROM THE unlockKeys,available and unlockableSet
         vars.DEBUG ? console.log(`LOOTBOXEMU: Unlocking random roll!`) : null;
-        let unlockID = this.unlockName.getData('actualID');
+        let unlockID = _rR ? this.unlockName.getData('actualID') : _ulName;
+        if (!_rR && !unlockID) return false;
 
         this.unlockableSet[unlockID].unlocked=true;
 
@@ -1141,7 +1155,9 @@ let Unlockables = class {
             // save the new unlockable set
             lV.saveUnlocks(this.unlockableSet);
 
-            // we now need to rebuild the pages
+            if (!_rR) return true;
+
+            // we now need to rebuild the pages if this was a random roll (other screens do this themselves)
             vars.DEBUG ? console.log(`REBUILDING THE UNLOCKABLE and UNLOCKED PAGES`) : null;
             this.rebuildPages();
         } else {

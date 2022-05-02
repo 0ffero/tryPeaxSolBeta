@@ -50,12 +50,14 @@ var config = {
     loader:{ enableParallel: true, crossOrigin: 'anonymous' }
 };
 
-var game,scene;
+var scene;
 fetch("./assets/fileList.json").then(response => {
     return response.json(); 
 }).then( (data)=> { 
     vars.loader = new LoadingBar(data);
-    vars.game.phaserGameObject = new Phaser.Game(config);
+    let gV = vars.game;
+    gV.phaserGameObject = new Phaser.Game(config);
+    gV.phaserGameObject.canvas.style.cursor='none';
 });
 
 
@@ -94,13 +96,16 @@ function create() {
 
     vars.init('CREATE'); // build the phaser objects, scenes etc
     let loadingScreen = scene.children.getByName('loadingImage');
-    scene.tweens.add({
-        targets: loadingScreen,
-        alpha: 0,
-        duration: 1000,
-        onComplete: (_t,_o)=> {
-            _o[0].destroy();
-            vars.isPhone ? vars.UI.buildSplashScreen() : null;
-        }
-    });
+    if (vars.isPhone) { // if we're on phone just delete the loading screen and build the splash screen
+        loadingScreen.destroy();
+        vars.UI.buildSplashScreen();
+    } else { // NOT isPhone, tween the loadingScreen
+        scene.tweens.add({
+            targets: loadingScreen,
+            alpha: 0, duration: 1000,
+            onComplete: (_t,_o)=> {
+                _o[0].destroy();
+            }
+        });
+    }
 }

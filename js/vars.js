@@ -1,8 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 087.008',
-
+    revision: 'rev 093.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -83,6 +82,12 @@ var vars = {
         'Revision 084   - Modified the UP animation (mainScren) to allow for the give2k to animate to the new UP count',
         'Revision 085   - Fixed a bug introduced by now having an unlocked version of the game (grey scale shader was being called on a button that might not exist',
         'Revision 086, 087  - Difficulty warning is completed. Just need to pop up at the appropriate times (such as when selecting/unlocking an OS cS). New awesome sound effect when the message is "typing"',
+        'Revision 088   - Fixed a minor bug where user would be shown the "options" container (unlockables) after changing it to unlockeds upon closing and re-entering the options screen',
+        'Revision 089   - Fixed the unlocking of tints. It now works like its meant to. Still to do card sets',
+        'Revision 090   - Added the warning pop up when selecting non OS card sets. Players will see the message until they click the "Dont show again" button.',
+        'Revision 091   - While the mS UP counts up the give2K button is disabled. After UP count finishes, it enables',
+        'Revision 092   - Added sound effect to card spread',
+        'Revision 093   - Default card set was being caught as not OS. Fixed.',
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -914,6 +919,9 @@ var vars = {
             if (!lS[`${pre}_ULInt`]) lS[`${pre}_ULInt`] = '["1010101","0101010"]';
             lV.options.ULInts = JSON.parse(lS[`${pre}_ULInt`]); // temporary var thats imported into unlockables class
 
+            if (!lS[`${pre}_WDSA`]) lS[`${pre}_WDSA`]=false; // the "dont show again" var for the warning container
+            lV.WDSA = lS[`${pre}_WDSA`]==='true' ? true : false;
+
             // store browser info
             if (!lS[`${pre}_uData`]) {
                 if (window.navigator) {
@@ -1126,6 +1134,7 @@ var vars = {
         },
 
         saveTint: (_tintAsInt)=> {
+            vars.DEBUG ? console.log(`%cSaving newly unlocked tint ${_tintAsInt}`,'color: #10FF10; font-size: 14px'):null;
             let lV = vars.localStorage;
             let lS = window.localStorage;
 
@@ -1140,6 +1149,12 @@ var vars = {
             let options = lV.options;
             options.volume = vars.audio.volume;
             lS[`${lV.pre}_options`] = JSON.stringify(options);
+        },
+
+        saveDontShowAgain: ()=> {
+            window.localStorage.TPX_WDSA=true;
+            vars.localStorage.WDSA=true;
+            return true;
         },
 
         updateTrackList: (_track,_enabled)=> {
@@ -1309,9 +1324,8 @@ var vars = {
             scene.tweens.addCounter({
                 from: 1, to: 0,
                 duration: 1000,
-                onUpdate: (_t,_v)=> {
-                    p.get(i)[0].setIntensity(_v.value);
-                }
+                onUpdate: (_t,_v)=> { p.get(i)[0].setIntensity(_v.value); },
+                onComplete: ()=> { vars.input.enableBuyButton(true); }
             });
         },
         
@@ -1323,9 +1337,8 @@ var vars = {
             scene.tweens.addCounter({
                 from: 0, to: 1,
                 duration: 250,
-                onUpdate: (_t,_v)=> {
-                    p.get(i)[0].setIntensity(_v.value);
-                }
+                onUpdate: (_t,_v)=> { p.get(i)[0].setIntensity(_v.value); },
+                onComplete: ()=> { vars.input.enableBuyButton(false); }
             });
         }
     },
@@ -2138,10 +2151,10 @@ var vars = {
         },
 
         init: ()=> {
+            // NOTE: Cursor movement is fully disabled when isPhone=true
             vars.DEBUG ? console.log(`%cFN: input > init`, `${consts.console.defaults} ${consts.console.colours.functionCall}`) : null;
 
             let gV = vars.game;
-            gV.phaserGameObject.canvas.style.cursor='none';
             // hide the default cursor and replace it with the ai finger cursor
             let cC = consts.canvas;
             let xyOffsets = { x: 620, y: 880 }; // cards Dealt isnt created until the game starts, so we just set with constants
@@ -2296,11 +2309,12 @@ var vars = {
                 };
 
                 if (gameObject.name ==='MS_options') {
+                    // disable looping (only required by the mS buttons)
                     cV.pausedByUser=true;
                     vars.containers.startIntroLoop(false);
                     cV.looping ? cV.show('mainScreen',false) : null;
-                    cV.show('optionsScreen',true);
-                    vars.game.unlockables.showContainer('options');
+                    
+                    iV.optionButtonClicked(gameObject.name);
                     return true;
                 };
 
@@ -2394,6 +2408,21 @@ var vars = {
                 vars.game.unlockables.unlockSpecific(gameObject,'tint');
                 return true;
             };
+
+            if (gameObject.name.startsWith('warn_')) {
+                if (gameObject.name.includes('dontShowAgain')) { // we need to save the fact that the user doesnt want to see this message again
+                    vars.localStorage.saveDontShowAgain();
+                } else if (gameObject.name.includes('OK')) {
+
+                } else {
+                    console.warn(`Warning button (${gameObject.name}) clicked, but has no handler!`);
+                    return false;
+                };
+                // hide the warning container and reset some alphas
+                vars.UI.showDifficultyWarning(false);
+                return true;
+            }
+
             // UNLOCKED BUTTONS (dealt with in unlockables)
             if (gameObject.name.startsWith('UNL_') || gameObject.name.startsWith('UNLD_') || gameObject.name.startsWith('CSU_') || gameObject.name.startsWith('TU_')) return false;
 
@@ -2420,6 +2449,11 @@ var vars = {
             }
 
             vars.DEBUG ? console.log(`The game object with name "${_gameObject.name}" has no click handler.`) : null;
+        },
+
+        enableBuyButton: (_enable=true)=> { // even though the button is called buy, its actually the give2k button as game has been purchased (only way to enter here)
+            let buyButton = vars.containers.getByName('mainScreen').getByName('MS_buy');
+            _enable ? buyButton.setInteractive() : buyButton.disableInteractive();
         },
 
         enableInput: (_enable=true,_timeout=null)=> {
@@ -2539,6 +2573,20 @@ var vars = {
             }
 
             vars.DEBUG ? console.log(`Button "${_gameObject.name}" has no handler!`) : null;
+        },
+
+        optionButtonClicked: (_buttonName)=> { // the option button was clicked. Note this can be called from several places, mainly mS though
+            // _buttonName is passed but currently unused. Will be needed when options buttons on other screens are enabled
+            let cV = vars.containers
+            let uL = vars.game.unlockables;
+            cV.show('optionsScreen',true);
+
+            // figure out which container we should be showing
+            let c = cV.getByName('optionsScreen');
+            let h = c.getByName('unlockablesHeader');
+            let showContainer = h.frame.name === 'unlockablesHeader' ? 'options' : 'unlocked';
+            uL.showContainer(showContainer);
+            
         },
 
         optionsClick: (_gameObject)=> {
@@ -3308,15 +3356,26 @@ var vars = {
         initDifficultyWarning: ()=> {
             let cC = consts.canvas;
             let cT = consts.tints;
-            let bg = scene.add.image(cC.cX,cC.cY,'whitePixel').setTint(0x0).setScale(cC.width, cC.height).setAlpha(0.85);
-            let msg = 'Using this card set will\ngive you a 10% increase\nin score and Unlock Points!';
-            let warningMessage = scene.add.bitmapText(cC.cX, cC.cY+50,'defaultFont',msg,96,1).setTint(cT.orange).setOrigin(0.5,0).setName('warningMessage');
-
-            let difficultyRating = 'Difficulty Rating: HARD';
-            let difficultyMessage = scene.add.bitmapText(cC.cX, cC.height*0.85,'defaultFont',difficultyRating,96,1).setName(`difficultyMessage`).setTint(cT.oranger).setOrigin(0.5,0).setAlpha(0);
 
             let container = vars.containers.getByName('difficultyWarning');
+
+            let bg = scene.add.image(cC.cX,cC.cY,'whitePixel').setTint(0x0).setScale(cC.width, cC.height).setAlpha(0.85);
+            let msg = 'Using this card set will\ngive you a 10% increase\nin score and Unlock Points!';
+            let warningMessage = scene.add.bitmapText(cC.cX, cC.cY-55,'defaultFont',msg,96,1).setTint(cT.orange).setOrigin(0.5,0).setName('warningMessage');
+
+            let difficultyRating = 'Difficulty Rating: HARD';
+            let difficultyMessage = scene.add.bitmapText(cC.cX, cC.height*0.75-15,'defaultFont',difficultyRating,96,1).setName(`difficultyMessage`).setTint(cT.oranger).setOrigin(0.5,0).setAlpha(0);
             container.add([bg,warningMessage,difficultyMessage]);
+
+            // "dont show again" button
+            let button = scene.add.image(cC.width*0.3, cC.height-10,'ui','textBoxBigBG').setScale(0.66,0.85).setOrigin(0.5,1).setName('warn_dontShowAgain').setInteractive().setAlpha(0);
+            let text = scene.add.bitmapText(cC.width*0.3, cC.height-25, 'defaultFontSmall', 'DONT\nSHOW\nAGAIN', 32,1).setName('warnT_dontShowAgain').setOrigin(0.5,1).setLetterSpacing(10).setTint(cT.oranger).setAlpha(0);
+            container.add([button,text]);
+            // OK button
+            button = scene.add.image(cC.width*0.7, cC.height-10,'ui','textBoxBigBG').setScale(0.66,0.8).setOrigin(0.5,1).setName('warn_OK').setInteractive().setAlpha(0);
+            text = scene.add.bitmapText(cC.width*0.7, cC.height-50, 'defaultFont', 'OK', 64,1).setOrigin(0.5,1).setName('warnT_OK').setLetterSpacing(10).setTint(cT.blueLight).setAlpha(0);
+            container.add([button,text]);
+
 
             container.setAlpha(0).setVisible(false);
         },
@@ -3477,9 +3536,17 @@ var vars = {
             container.add([welcomeText, rightSide]);
 
             let y = cC.cY-50;
+            let bot = vars.localStorage.unlocked;
             let buttons = ['newGame','hiScores','options', 'buy'];
             buttons.forEach((_key)=> {
-                let buttonBG = scene.add.image(cC.width*0.75, y, 'mainScreen', 'buttonBG').setName(`MS_${_key}`).setAlpha(0).setDepth(depth-1).setInteractive();
+                let buttonBG = scene.add.image(cC.width*0.75, y, 'mainScreen', 'buttonBG').setName(`MS_${_key}`).setAlpha(0).setDepth(depth-1);
+                if (_key==='buy') {
+                    if (!bot) {
+                        buttonBG.setInteractive();
+                    };
+                } else {
+                    buttonBG.setInteractive();
+                };
                 pageButtons[screenName].push(`MS_${_key}`);
                 vars.UI.tempUIObjects.push(buttonBG);
 
@@ -3691,9 +3758,21 @@ var vars = {
 
         initWellDone: null, // well done is built every time. see buildWellDone, below
 
+
+
+        // DIFFICULY WARNING FUNCTIONS
+        showDifficultyWarning: (_show=true)=> { // initial function which adds cards and shows diff warning
+            _show ? vars.input.enableInput(false) : vars.input.enableInput(false,200);
+            let cV = vars.containers;
+            cV.show('difficultyWarning',_show);
+            cV.show('difficultyWarningCardSet',_show);
+
+            _show ? vars.UI.addCardSetToDifficultyWarning() : vars.UI.removeCardsFromDifficultyWarning();
+            // the animation to type the messages is called after the cards have been shown
+        },
         addCardSetToDifficultyWarning: ()=> {
             let container = vars.containers.getByName('difficultyWarningCardSet');
-            let x = 82; let xInc=132; let y = 90;
+            let x = 82; let xInc=132; let y = 20;
 
             let cardNumber = 0;
             ['C','D','S','H'].forEach((_suit)=> {
@@ -3714,7 +3793,7 @@ var vars = {
             container.getAll().forEach((_c)=> { _c.destroy(); });
 
             container = cV.getByName('difficultyWarning');
-            container.getByName('difficultyMessage').setAlpha(0);
+            ['difficultyMessage','warn_dontShowAgain','warnT_dontShowAgain','warn_OK','warnT_OK'].forEach((_o)=> { container.getByName(_o).setAlpha(0); });
         },
         typeWarningText: ()=> {
             let container = vars.containers.getByName('difficultyWarning');
@@ -3736,12 +3815,19 @@ var vars = {
 
             // after the text has been typed, fade in the difficulty text
             let difficultyMessage = container.getByName('difficultyMessage');
+            let DSA = container.getByName('warn_dontShowAgain');
+            let DSAT = container.getByName('warnT_dontShowAgain');
+            let OK = container.getByName('warn_OK');
+            let OKT = container.getByName('warnT_OK');
             scene.tweens.add({
-                targets: difficultyMessage,
+                targets: [difficultyMessage, DSA, DSAT, OK, OKT],
                 alpha: 1, delay: delay, duration: 1000,
                 onComplete: ()=> { vars.input.enableInput(true); }
             })
         },
+        // END OF DIFFICULTY WARNING FUNCTIONS
+
+
 
         beginMainScreenLoop: ()=> {
             // start looping & enable card suit particles
@@ -4004,7 +4090,7 @@ var vars = {
             })
         },
 
-        showCardSpread: ()=> {
+        showCardSpread: ()=> { // this function runs after the card set has loaded. it also display the warning if card set isnt OS or SOS
             let angles = []; let yPush = [];
             for (let angle = -Math.PI/4; angle<=Math.PI/4; angle+=Math.PI/2/52) {
                 angles.push(angle);
@@ -4039,18 +4125,26 @@ var vars = {
                     delay: delay,
                     duration: delayInc,
                     hold: (52-_cardNumber)*delayInc,
+                    onStart: ()=> { vars.audio.playSound('cardLeftTurn'); },
                     onComplete: (_t,_o)=> { // fade the card back out
                         scene.tweens.add({
                             targets: _o[0],
                             alpha: 0,
                             delay: (72-_o[0].depth)*50,
                             duration: 50,
+                            onStart: ()=> { vars.audio.playSound('cardLeftTurn'); },
                             onComplete: (_t,_o)=> { // destroy each card once its faded out
                                 _o[0].destroy();
                                 if (_o[0].name==='spread_AH') { // if this is the last card
                                     vars.containers.getByName('unlockedCardSpread').setAlpha(0).setVisible(false); // hide the card spread container
-                                    // and fade the unlocked container back in
-                                    vars.game.unlockables.showContainer('unlocked');
+                                    vars.game.unlockables.showContainer('unlocked'); // and fade the unlocked container back in
+
+                                    // should we show the warning?
+                                    if (!vars.game.cardSet.includes('OS') && !vars.game.cardSet.includes('default') && !vars.localStorage.WDSA) {
+                                        vars.UI.showDifficultyWarning();
+                                        return true;
+                                    };
+
                                 };
                             }
                         });
@@ -4060,16 +4154,6 @@ var vars = {
                 x+=xInc;
                 delay+=delayInc;
             });
-        },
-
-        showDifficultyWarning: (_show=true)=> {
-            vars.input.enableInput(false);
-            let cV = vars.containers;
-            cV.show('difficultyWarning',_show);
-            cV.show('difficultyWarningCardSet',_show);
-
-            _show ? vars.UI.addCardSetToDifficultyWarning() : vars.UI.removeCardsFromDifficultyWarning();
-            // the animation to type the messages is called after the cards have been shown
         },
 
         showForegroundBarrier: (_show=true)=> {

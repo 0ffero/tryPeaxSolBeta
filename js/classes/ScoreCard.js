@@ -418,8 +418,8 @@ let ScoreCard = class {
     }
 
     inputKeyDown(_key) { // handles keydown when entering name
-        vars.DEBUG ? console.log(`%cHigh Score table KEYDOWN.\nEntry is currently ${!this.player.enteringName ? 'disabled' : 'enabled'}`,`color: ${!this.player.enteringName ? '#ff8000' : '#10FF10'}`) : null;
         if (!this.player.enteringName) return false;
+        vars.DEBUG ? console.log(`%cHigh Score table KEYDOWN.`,`color: #10FF10`) : null;
 
         if (_key.keyCode<65 || _key.keyCode>90) {
             if (_key.keyCode!==189 && _key.keyCode!==190 && _key.keyCode!==8 && _key.keyCode!==13) {
