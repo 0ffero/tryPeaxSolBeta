@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 093.008',
+    revision: 'rev 095.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -88,6 +88,9 @@ var vars = {
         'Revision 091   - While the mS UP counts up the give2K button is disabled. After UP count finishes, it enables',
         'Revision 092   - Added sound effect to card spread',
         'Revision 093   - Default card set was being caught as not OS. Fixed.',
+        'Revision 094   - Fixed space/enter and left right keys. Inlcluding  adding code to deal with ulHeader_button',
+        'Revision 095   - Keyboard input works on all pages now',
+
 
         'SPEED UP REVISIONS (mainly for phones)',
         'Revision 001   - Started speeding everything up. Removed crossfades for phones as theyre pretty slow',
@@ -712,7 +715,7 @@ var vars = {
                             vars.input.enableInput(true);
                             if (vars.input.cursor.phaserObject.getData('wasVisible')) {
                                 vars.input.cursor.quickShow(true);
-                                vars.input.cursor.moveToPageButton();
+                                vars.input.cursor.moveToInitialPageButton();
                             };
                         }
                     });
@@ -1991,37 +1994,12 @@ var vars = {
                 let onTop = vars.input.cursor.getCurrentlyOnTop();
                 let container = vars.containers.getByName(onTop);
 
-                // get the buttons for that page
-                let pageButtons = iV.pageButtons[onTop];
 
 
-                // check if the cursor is currently over a button
-                if ((over && !pageButtons.includes(over)) || !over) { // the "over" is currently for a button NOT on this page
-                    console.log(`The currently over (${over}) isnt on this page (${onTop}). Moving to default button`);
-                    c.moveToPageButton(); // request the top button for this page
-                    return true;
-                };
-
-                // IF we get here the "over" is valid, find the next button
-                let found=null;
-                pageButtons.every((_pB,_i)=> { if (_pB===over && found===null) { found=_i; return true; }; return true; });
-
-                if (!vars.checkType(found,'int')) { vars.input.cursor.moveToPageButton(); return true; };
-
-                let retVal;
-                switch (_dir) {
-                    case 'up':
-                        retVal = found-1 < 0 ? pageButtons[pageButtons.length-1] : pageButtons[found-1];
-                    break;
-
-                    case 'down':
-                        retVal = found+1 >= pageButtons.length ? pageButtons[0] : pageButtons[found+1];
-                    break;
-
-                    case 'left': // left and right do different things depending on the page thats onTop
-                        if (onTop==='mainScreen') {
-                            retVal = pageButtons[0];
-                        } else if (onTop==='highScoreTable') {
+                // OK. We should split this next piece of code out to a seperate function
+                if (_dir==='left' || _dir==='right') {
+                    if (_dir==='left') { // left and right do different things depending on the page thats onTop. MOVE TO ABOVE DIR===SELECT TEST ABOVE (as it should always move pages if possible)
+                        if (onTop==='highScoreTable') {
                             let nextButton = container.getByName('nextPage_HSTB');
                             if (!nextButton.visible || !nextButton.alpha) return false;
                             vars.game.scoreCard.showHighScorePage(false);
@@ -2037,12 +2015,10 @@ var vars = {
                             };
                             return true;
                         };
-                    break;
+                    };
 
-                    case 'right':
-                        if (onTop==='mainScreen') {
-                            retVal = pageButtons[1];
-                        } else if (onTop==='highScoreTable') {
+                    if (_dir==='right') {
+                        if (onTop==='highScoreTable') {
                             let nextButton = container.getByName('nextPage_HSTB');
                             if (!nextButton.visible || !nextButton.alpha) return false;
                             vars.game.scoreCard.showHighScorePage(true);
@@ -2058,13 +2034,78 @@ var vars = {
                             };
                             return true;
                         };
+                    };
+
+                    // NOTE THAT THERES NO DEFAULT RETURN STATEMENT HERE.
+                    // THATS BECAUSE, IF LEFT/RIGHT IS PRESSED ON A PAGE
+                    // THAT DOESNT HAVE MULTIPLE PAGES, IT IS STILL USED
+                    // ON SOME PAGES TO MOVE TO A SPECIFIC BUTTON!
+                };
+
+                // IF THE USER PRESSES THE SPACE/ENTER KEYS
+                if (_dir==='select' && over) {
+                    // get the actual button its over
+                    let gameObject = container.getByName(over);
+                    // pass it to the v.i.click function
+                    vars.input.dealWithClick(gameObject);
+                    return true;
+                } else if (_dir==='select' && !over) {
+                    console.log(`%cCursor isnt currently over a button!`,'color: #550000')
+                    return false;
+                };
+
+                // get the buttons for that page
+                let pageButtons = iV.pageButtons[onTop];
+
+
+                // check if the cursor is currently over a button
+                if ((over && !pageButtons.includes(over)) || !over) { // the "over" is currently for a button NOT on this page
+                    console.log(`The currently over (${over}) isnt on this page (${onTop}). Moving to default button`);
+                    c.moveToInitialPageButton(); // request the top button for this page
+                    return true;
+                };
+
+                // IF we get here the "over" is valid, find the next button
+                let found=null;
+                pageButtons.every((_pB,_i)=> { if (_pB===over && found===null) { found=_i; return true; }; return true; });
+
+                if (!vars.checkType(found,'int')) { vars.input.cursor.moveToInitialPageButton(); return true; };
+
+                let retVal;
+                switch (_dir) {
+                    case 'up':
+                        retVal = found-1 < 0 ? pageButtons[pageButtons.length-1] : pageButtons[found-1];
+                    break;
+
+                    case 'down':
+                        retVal = found+1 >= pageButtons.length ? pageButtons[0] : pageButtons[found+1];
+                    break;
+
+                    // THE NEXT TWO CASE WERE WHAT WAS MENTIONED ABOVE (RE L/R)
+                    // by the time we get here weve already ruled out every other onTop, but its better to be precise!
+                    case 'left':
+                        if (onTop==='mainScreen') {
+                            retVal = pageButtons[0];
+                        } else {
+                            console.log(`%cKB LEFT requested for an unknown onTop (${onTop})`,'color: #550000');
+                            return false;
+                        };
+                    break;
+
+                    case 'right':
+                        if (onTop==='mainScreen') {
+                            retVal = pageButtons[1];
+                        } else {
+                            console.log(`%cKB RIGHT requested for an unknown onTop (${onTop})`,'color: #550000');
+                            return false;
+                        };
                     break;
                 };
 
                 if (!vars.checkType(retVal,'string')) { console.warn(`Invalid retVal ${retVal}. It should be a button on this screen!`); return false; };
 
                 console.log(`Looking for button with name ${retVal} in container ${onTop}`);
-                let button = container.getByName(retVal);
+                let button = container.getByName(retVal).getCenter();
                 let buttonXY = [button.x, button.y];
 
                 let o = consts.cursorOffsets;
@@ -2072,7 +2113,7 @@ var vars = {
 
             },
 
-            moveToPageButton: ()=> {
+            moveToInitialPageButton: ()=> {
                 let pointerOffsetXY = [25,40];
                 let onTop = vars.input.cursor.getCurrentlyOnTop();
                 // (needed when moving to a new button) let allButtons = vars.input.pageButtons[onTop];
@@ -2091,7 +2132,10 @@ var vars = {
                     if (!button) return 'Cant find button';
                 
                     // button was found
-                    phaserObject.setPosition(button.x+pointerOffsetXY[0], button.y+pointerOffsetXY[1]);
+                    // get centre position of button
+                    let xy = button.getCenter();
+                    // position cursor
+                    phaserObject.setPosition(xy.x+pointerOffsetXY[0], xy.y+pointerOffsetXY[1]);
                     phaserObject.setData({ over: defaultButton });
 
                     return true;
@@ -2102,7 +2146,7 @@ var vars = {
                 let over = phaserObject.getData('over');
                 if (!vars.input.pageButtons[onTop].includes(over)) { // button isnt on this screen, reset and re-request
                     phaserObject.setData({ over: null });
-                    vars.input.cursor.moveToPageButton();
+                    vars.input.cursor.moveToInitialPageButton();
                     return;
                 };
             },
@@ -2195,11 +2239,11 @@ var vars = {
 
                     // ARROW KEYS and SPACE/ENTER
                     // first: the only keys we are interested in beyond this point is arrows, space/enter & esc
-                    let allowed = ['Space','Enter','Escape'];
+                    let allowed = [' ','Enter','Escape'];
                     if (!_key.key.includes('Arrow') && !allowed.includes(_key.key)) return false;
                     
                     
-                    // if we get here, we do indeed have an Arrow, Space/Enter or Esc up event
+                    // if we get here, we do indeed have an Arrow, Space/Enter or Esc "up event"
                     let key = _key.key;
                     if (key==='Escape') { // ESCAPE key is used to close several containers (HS,NG - both, gS)
                         vars.input.cursor.escapeKeyPressed();
@@ -2212,7 +2256,7 @@ var vars = {
                     !vars.input.usingCursorKeys ? vars.input.usingCursorKeys=true : null;
 
                     // now deal with the key
-                    let direction = key==='Space' || key==='Enter' ? 'select' : key.replace('Arrow','').toLowerCase();
+                    let direction = key===' ' || key==='Enter' ? 'select' : key.replace('Arrow','').toLowerCase();
                     let msg = direction==='select' ? `Clicking on button` : `Moving cursor ${direction}`;
                     vars.DEBUG ? console.log(`%c🖮 ${msg}`, `color: black; background-color: #50FF50`) : null;
                     vars.input.cursor.keyboardMove(direction);
@@ -2421,10 +2465,19 @@ var vars = {
                 // hide the warning container and reset some alphas
                 vars.UI.showDifficultyWarning(false);
                 return true;
-            }
+            };
 
             // UNLOCKED BUTTONS (dealt with in unlockables)
             if (gameObject.name.startsWith('UNL_') || gameObject.name.startsWith('UNLD_') || gameObject.name.startsWith('CSU_') || gameObject.name.startsWith('TU_')) return false;
+
+            
+
+            // KEYBOARD "BUTTONS"
+            // SOME BUTTONS HAVE INLINE HANDLERS THAT CAN BE . THOSE ARE DEALT WITH HERE
+            if (gameObject.name==='unlockablesHeader_button') {
+                vars.input.switchVisibleUnlocksContainer();
+                return true;
+            };
 
             vars.DEBUG ? console.log(`The game object with name "${gameObject.name}" has no click handler.`) : null;
         },
@@ -3721,7 +3774,7 @@ var vars = {
             pageButtons[screenName].push('unlockablesHeader_button');
             unlockSwapButton.on('pointerup', vars.input.switchVisibleUnlocksContainer);
             let close = scene.add.image(cC.width-10, cC.height-55, 'ui', 'optExitButton').setOrigin(1,1).setName('options_close').setInteractive();
-            pageButtons[screenName].push('options_close','');
+            pageButtons[screenName].push('options_close');
             container.add([close,unlockSwapButton]);
 
             // update this container to show current volume
