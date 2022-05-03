@@ -28,6 +28,8 @@ let Deck = class {
 
         let times = getRandom(30,70);
         for (let t=0; t<times; t++) { shuffle(this.cardSet); };
+
+        this.resetCursorOver();
     }
 
     decreaseScore() {
@@ -72,6 +74,10 @@ let Deck = class {
         // reenable after unlock points are counted
         let score = this.playerScore; let time = this.currentTime;
         vars.game.getUnlockPoints(score, time);
+    }
+
+    resetCursorOver() {
+        vars.input.cursor.phaserObject.setData({ over: null });
     }
 
     resetStreak() {

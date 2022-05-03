@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 095.008',
+    revision: 'rev 096.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -90,6 +90,7 @@ var vars = {
         'Revision 093   - Default card set was being caught as not OS. Fixed.',
         'Revision 094   - Fixed space/enter and left right keys. Inlcluding  adding code to deal with ulHeader_button',
         'Revision 095   - Keyboard input works on all pages now',
+        'Revision 096   - Keyboard input now works on game screen. Starts timer on first good click',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -1945,29 +1946,34 @@ var vars = {
 
                     case 'select':
                         let cName = cursorObject.getData('over');
-                        console.log(`Clicking on card with name ${cName}`);
+                        if (!cName) return false;
+
+                        // first click of the game ? Start the timer
+                        if (!vars.game.deal.startTime) vars.game.deal.startTime = new Date();
+
+                        vars.DEBUG ? console.log(`Clicking on card with name ${cName}`) : null;
                         if (cName==='cardsLeft') { // player clicked on one of the cards left
                             c.clickOnCardsLeft();
                             return true;
                         } else { // player clicked on a dealt card
                             let gameObject = scene.groups.cardsDealt.getByName(cName);
                             let valid = vars.game.deal.checkDealtCard(gameObject);
-                            console.log(`%cObject is ${valid ? 'valid' : 'not valid'}`, 'color: black; background-color: white');
+                            vars.DEBUG ? console.log(`%cObject is ${valid ? 'valid' : 'not valid'}`, 'color: black; background-color: white') : null;
                             // especially on game win (as I changed a true to false!)
                             if (!valid) return false;
 
                             // if we get here the card was valid
                             // MUST be done before updating the cachedFaceUps var
                             let rs = c.findTheNearestCardToTheClickedOnOne(cName); // returns true, false or "delay"
-                            console.log(`%cResponse was ${ rs==='delay' ? 'delay' : !rs ? 'false' : 'true'}`, 'color: black; background-color: white');
+                            vars.DEBUG ?console.log(`%cResponse was ${ rs==='delay' ? 'delay' : !rs ? 'false' : 'true'}`, 'color: black; background-color: white') : null;
                             
                             // update the cached list
 
                             iV.cursor.cachedFaceUps = vars.game.deal.getAllFaceUpCards(); // update the face up cards list
-                            console.log(`%cFace ups were re-cached`, 'color: black; background-color: white');
+                            vars.DEBUG ?console.log(`%cFace ups were re-cached`, 'color: black; background-color: white') : null;
 
                             if (rs==='delay') {
-                                console.log(`%cRunning delayed findNearest`, 'color: #10ff10; background-color: black');
+                                vars.DEBUG ?console.log(`%cRunning delayed findNearest`, 'color: #10ff10; background-color: black') : null;
                                 c.findTheNearestCardToTheClickedOnOne(cName,true); // true is to tell this function that we delayed this call
                             };
                             return true;
@@ -1976,6 +1982,44 @@ var vars = {
                         return true;
                     break;
                 }
+            },
+
+            moveToInitialPageButton: ()=> {
+                let pointerOffsetXY = [25,40];
+                let onTop = vars.input.cursor.getCurrentlyOnTop();
+                // (needed when moving to a new button) let allButtons = vars.input.pageButtons[onTop];
+                let c = vars.input.cursor;
+                let phaserObject = c.phaserObject;
+                if (!phaserObject.getData('over')) {
+                    vars.DEBUG ? console.log(`Cursor isnt currently over any buttons\nFinding out what the default button is for this page`) : null;
+                    let defaultButton = consts.pageButtons[onTop];
+                
+                    // ok, find that button
+                    let container = vars.containers.getByName(onTop);
+                    if (!container) return 'Cant find container';
+            
+                    vars.DEBUG ? console.log(`Looking for button with name: ${defaultButton}`) : null;
+                    let button = container.getByName(defaultButton);
+                    if (!button) return 'Cant find button';
+                
+                    // button was found
+                    // get centre position of button
+                    let xy = button.getCenter();
+                    // position cursor
+                    phaserObject.setPosition(xy.x+pointerOffsetXY[0], xy.y+pointerOffsetXY[1]);
+                    phaserObject.setData({ over: defaultButton });
+
+                    return true;
+                };
+
+                // if we get here theres already an OVER
+                // first make sure the over is actually on this page
+                let over = phaserObject.getData('over');
+                if (!vars.input.pageButtons[onTop].includes(over)) { // button isnt on this screen, reset and re-request
+                    phaserObject.setData({ over: null });
+                    vars.input.cursor.moveToInitialPageButton();
+                    return;
+                };
             },
 
             moveToNextPageButton: (_dir)=> {
@@ -2036,10 +2080,11 @@ var vars = {
                         };
                     };
 
-                    // NOTE THAT THERES NO DEFAULT RETURN STATEMENT HERE.
+                    // NOTE THAT THERES NO DEFAULT RETURN STATEMENT HERE
                     // THATS BECAUSE, IF LEFT/RIGHT IS PRESSED ON A PAGE
                     // THAT DOESNT HAVE MULTIPLE PAGES, IT IS STILL USED
                     // ON SOME PAGES TO MOVE TO A SPECIFIC BUTTON!
+                    // INCLUDING MOVEMENT ON THE GAME SCREEN
                 };
 
                 // IF THE USER PRESSES THE SPACE/ENTER KEYS
@@ -2111,44 +2156,6 @@ var vars = {
                 let o = consts.cursorOffsets;
                 cursorObject.setPosition(buttonXY[0]+o.x,buttonXY[1]+o.y).setData({ over: retVal });
 
-            },
-
-            moveToInitialPageButton: ()=> {
-                let pointerOffsetXY = [25,40];
-                let onTop = vars.input.cursor.getCurrentlyOnTop();
-                // (needed when moving to a new button) let allButtons = vars.input.pageButtons[onTop];
-                let c = vars.input.cursor;
-                let phaserObject = c.phaserObject;
-                if (!phaserObject.getData('over')) {
-                    vars.DEBUG ? console.log(`Cursor isnt currently over any buttons\nFinding out what the default button is for this page`) : null;
-                    let defaultButton = consts.pageButtons[onTop];
-                
-                    // ok, find that button
-                    let container = vars.containers.getByName(onTop);
-                    if (!container) return 'Cant find container';
-            
-                    vars.DEBUG ? console.log(`Looking for button with name: ${defaultButton}`) : null;
-                    let button = container.getByName(defaultButton);
-                    if (!button) return 'Cant find button';
-                
-                    // button was found
-                    // get centre position of button
-                    let xy = button.getCenter();
-                    // position cursor
-                    phaserObject.setPosition(xy.x+pointerOffsetXY[0], xy.y+pointerOffsetXY[1]);
-                    phaserObject.setData({ over: defaultButton });
-
-                    return true;
-                };
-
-                // if we get here theres already an OVER
-                // first make sure the over is actually on this page
-                let over = phaserObject.getData('over');
-                if (!vars.input.pageButtons[onTop].includes(over)) { // button isnt on this screen, reset and re-request
-                    phaserObject.setData({ over: null });
-                    vars.input.cursor.moveToInitialPageButton();
-                    return;
-                };
             },
             
             quickShow: (_show=true)=> { // quickly switch between alpha 1 and 0 (and 0 to 1)
