@@ -272,48 +272,84 @@ let Unlockables = class {
 
     // THE UI HAS BEEN BUILT
     // THESE FUNCTIONS DEAL WITH INTERACTIVITY, MANIP etc
-    animatedUnlock(_pV=null) { // after checking that the player has enough unlock points and the new UP is saved, we enter here
+    animatedTintUnlock(_pV=null) { // after checking that the player has enough unlock points and the new UP is saved, we enter here
         if (_pV===null) return false;
+        
+        let tintImage = _pV;
         // OK, we need to pop the tint image out of the container
         let container = this.containers.options;
-        let type;
-        if (_pV.name.startsWith('tint_')) {
-            type = 'tint';
-        } else if (_pV.name.startsWith('cardSet_')) {
-            type = 'cardSet';
-        } else {
-            console.error(`Passed object name (${_pV.name}) doesnt start with tint or cardSet. Failing gracefully!`);
-            return false;
-        };
-        
-        if (type==='tint') {
-            let tintImage = _pV;
-            let xOffset = container.x;
-            let yOffset = container.y;
-            let depth = container.depth;
-            container.remove(tintImage); // pop it out
-            tintImage.setPosition(tintImage.x+xOffset+tintImage.scaleX/2, tintImage.y+yOffset+tintImage.scaleY/2).setDepth(depth+5).setOrigin(0.5);
 
-            // theres a delay between popping something out of a container and its depth being set (of 1 frame)
-            // so we need to wait a bit (100ms) before moving it. If we dont wait the depth will NOT be set
-            // (and hence you wont see it above the black background)
-            // NOTE: I think this is what the .dirty var deals with, not sure though. If it is, Im assuming I wont need the delay...
-            scene.tweens.addCounter({
-                from: 0,
-                to: 1,
-                duration: 100,
-                onComplete: vars.UI.displayUnlock,
-                onCompleteParams: [ tintImage ]
+        let xOffset = container.x;
+        let yOffset = container.y;
+        let depth = container.depth;
+        container.remove(tintImage); // pop it out
+        tintImage.setPosition(tintImage.x+xOffset+tintImage.scaleX/2, tintImage.y+yOffset+tintImage.scaleY/2).setDepth(depth+5).setOrigin(0.5);
+
+        // theres a delay between popping something out of a container and its depth being set (of 1 frame)
+        // so we need to wait a bit (100ms) before moving it. If we dont wait the depth will NOT be set
+        // (and hence you wont see it above the black background)
+        // NOTE: I think this is what the .dirty var deals with, not sure though. If it is, Im assuming I wont need the delay...
+        scene.tweens.addCounter({
+            from: 0,
+            to: 1,
+            duration: 100,
+            onComplete: vars.UI.displayUnlock,
+            onCompleteParams: [ tintImage ]
+        });
+        return true;
+
+    }
+
+    animatedCardSetUnlock(_cards) { // before this function is called, the cards are validated, so it doesnt have to happen here
+        let container = this.containers.options;
+
+        // generate temporary black screen
+        let depth = this.containers.options.depth;
+        this.deletableBackground = this.scene.add.image(this.cC.cX, this.cC.cY, 'whitePixel').setScale(this.cC.width, this.cC.height).setDepth(depth+3).setAlpha(0).setTint(0x0);
+        this.unlockText = this.scene.add.bitmapText(this.cC.cX, this.cC.cY/2, 'defaultFont', `NEW CARD SET UNLOCKED`,64).setLetterSpacing(5).setOrigin(0.5).setTint(consts.tints.orange).setAlpha(0).setDepth(depth+4);
+        let fadeIn = 100;
+        scene.tweens.add({
+            targets: [this.unlockText,this.deletableBackground],
+            alpha: 1,
+            duration: fadeIn,
+            onComplete: (_t,_o)=> { // once the background has faded in, start rebuilding the pages
+                console.log('Rebuilding pages');
+                vars.game.unlockables.rebuildPages();
+            }
+        });
+
+        // when popping the images out of the container, we need to re-place them based on the containers offsets
+        let xOffset = container.x;
+        let yOffset = container.y;
+        _cards.forEach((_c,_i)=> { // for each of the 5 cards
+            container.remove(_c); // POP the card out of the container
+            _c.setPosition(_c.x+xOffset+_c.width/2, _c.y+yOffset+_c.width/2).setDepth(depth+5).setOrigin(0.5); // and set its position
+            _c.setData({ position: _i });
+
+            // animate the 5 cards
+            scene.tweens.add({ // spread them across the screen
+                targets: _c,
+                x: (_i+1)*320, y: this.cC.cY, duration: 250, delay: _i*250,
+                onComplete: (_t,_o)=> {
+                    let cC = consts.canvas;
+                    let position = _o[0].getData('position'); // needed to set the delay before fadeout
+                    scene.tweens.add({
+                        targets: _c,
+                        alpha: 0, x: cC.cX, delay: (9-position)*250, duration: 1000,
+                        onComplete: (_t,_o)=> {
+                            let position = _o[0].getData('position'); // needed to set the delay before fadeout
+                            _o[0].destroy();
+                            if (position===4) { // last card has faded out (they all do this at the same time, but we only want this to run once, not every time)
+                                // we are inside the phaser tween, so this, is not the class object
+                                let cObject = vars.game.unlockables;
+                                cObject.deletableBackground.destroy(); cObject.deletableBackground=null;
+                                cObject.unlockText.destroy(); cObject.unlockText=null;
+                            };
+                        }
+                    });
+                }
             });
-            return true;
-        } else if (type==='cardSet') {
-            console.log(`Animating Card Set Unlock!`)
-            return true;
-        };
-        
-        // If we get here the type hasnt been implemented yet
-        console.error(`This unlock (${_pV.name}) has no handler code yet!`);
-        return false;
+        });
     }
 
     click () {
@@ -403,7 +439,7 @@ let Unlockables = class {
         });
     }
 
-    displayUnlock(_pV) { // called from v.g.displayUnlock
+    displayUnlock(_pV) { // called from v.g.displayUnlock. NOW ONLY USED BY TINTS WHEN UNLOCKING!
         let tintImage = _pV;
         let type = _pV.name.startsWith('tint_') ? 'tint' : _pV.name.startsWith('cardSet_') ? 'cardSet' : null;
         if (!type) return false;
@@ -627,8 +663,8 @@ let Unlockables = class {
 
                 // add the unlock bar/button
                 let cost = ulName.includes('gold') ||ulName.includes('silver') || ulName.includes('bronze') ? consts.unlockPoints.special : consts.unlockPoints.cardSet;
-                let button = this.scene.add.image(startX+1,y+imageHeight,'whitePixel').setData({ delete: true, cost: cost }).setName(`unlock_cS_${ulName}`).setAlpha(0.7).setVisible(visible).setScale(buttonWidth,90).setOrigin(0,1).setTint(0x0).setInteractive();
-                let unlockIcon = this.scene.add.image(startX+buttonWidth,y+7,'unlockUI','unlockIcon').setData({ delete: true, cost: cost }).setName(`unlock_cSUI_${ulName}`).setVisible(visible).setOrigin(1,0).setInteractive();
+                let button = this.scene.add.image(startX+1,y+imageHeight,'whitePixel').setData({ delete: true, cost: cost, page: page }).setName(`unlock_cS_${ulName}`).setAlpha(0.7).setVisible(visible).setScale(buttonWidth,90).setOrigin(0,1).setTint(0x0).setInteractive();
+                let unlockIcon = this.scene.add.image(startX+buttonWidth,y+7,'unlockUI','unlockIcon').setData({ delete: true, cost: cost, page: page }).setName(`unlock_cSUI_${ulName}`).setVisible(visible).setOrigin(1,0).setInteractive();
                 let cardSetName = this.getCardSetName(ulName);
                 let buttonText = this.scene.add.text(startX+buttonWidth/2,y+imageHeight-12,`${cardSetName} card set`, { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setData({ delete: true }).setOrigin(0.5,1).setVisible(visible);
                 let costText = this.scene.add.text(startX+buttonWidth/2,y+imageHeight-50,`${cost} UPs`, { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setData({ delete: true }).setOrigin(0.5,1).setVisible(visible).setStroke(consts.htmlColours.blueDark, 2).setShadow(2, 2, "#333333", 2, true, true);
@@ -876,19 +912,42 @@ let Unlockables = class {
 
         // if we get here the player has enough points to unlock this
         this.useUnlockPoints(cost); // use the required amount of unlock points
-        // save it
+
+
+        // SAVE THE NEW UNLOCKED
         if (_type==='tint') {
             // SAVE the tint
             vars.game.unlockables.unlockRandomRoll(false,`tint${uName}`);
+            
+            let unlockable = `${_type}_${uName}`;
+            let uObject = this.containers.options.getByName(unlockable);
+            // do unlock animation
+            // NOTE: the object we pass is the unlock image (not whatever clicked on as that will be the unlock icon or background - NOT the unlockable)
+            this.animatedTintUnlock(uObject);
+            return true;
         } else if (_type==='cardSet') { // unlock is a cardSet
-            debugger;
+            vars.game.unlockables.unlockRandomRoll(false,`cS${uName}`); // save the card set and unlocked
+            let page = _object.getData('page');
+            let cSCList = this.cardSetContainers[`page_${page}`][uName];
+
+            let cards = [];
+            cSCList[0].getChildren().forEach((_c)=> {
+                _c.name!=='ulCard' ? _c.alpha=0 : cards.push(_c);
+            });
+
+            if (cards.length!==5) {
+                console.warn(`Unable to find the card set with name ${uName}! It should be on page ${page}(+1 for UI page as pages array start at 0, not 1.)\nUnable to run animations on the cards (cards array shown below).`);
+                console.log(cards);
+                return false;
+            };
+
+            // if we get here we have the five cards
+            this.animatedCardSetUnlock(cards);
+            return true;
         };
-        // do unlock animation
-        // the object we pass is the unlock image (not whatever clicked on as that will be the unlock icon of background - NOT the unlockable)
-        let unlockable = `${_type}_${uName}`;
-        let uObject = this.containers.options.getByName(unlockable);
         
-        this.animatedUnlock(uObject);
+        console.warn(`Unknown unlock type (${_type})!`);
+        return false;
     }
 
     updateUIUnlockPoints() {
@@ -1137,6 +1196,7 @@ let Unlockables = class {
             available = this.available.cardSets;
         } else { // unknown unlockable type
             console.error('Unknown unlock type!');
+            return false;
         };
 
         if (searchingFor && available) { // once weve set the "searching for" var and the "array set" were looping thru

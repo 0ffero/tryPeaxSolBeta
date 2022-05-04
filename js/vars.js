@@ -91,6 +91,7 @@ var vars = {
         'Revision 094   - Fixed space/enter and left right keys. Inlcluding  adding code to deal with ulHeader_button',
         'Revision 095   - Keyboard input works on all pages now',
         'Revision 096   - Keyboard input now works on game screen. Starts timer on first good click',
+        'Revision 097-100   - Card sets now unlock properly... at long fekn last o.0',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
