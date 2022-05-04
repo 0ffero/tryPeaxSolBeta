@@ -360,7 +360,6 @@ let Unlockables = class {
         let gV = vars.game;
         let classObject = gV.unlockables;
         if (this.name.startsWith('UNL_')) { // UNLOCKABLES prev/next button
-            iV.enableInput(false,100);
             if (this.name.endsWith('previous')) {
                 classObject.optionsShowPage(false);
                 return true;
@@ -368,8 +367,8 @@ let Unlockables = class {
                 classObject.optionsShowPage(true);
                 return true;
             };
-        } else if (this.name.startsWith('UNLD_')) { // UNLOCKEDs prev/next buttond
             iV.enableInput(false,100);
+        } else if (this.name.startsWith('UNLD_')) { // UNLOCKEDs prev/next buttond
             if (this.name.endsWith('previous')) {
                 classObject.optionsShowPageULD(false);
                 return true;
@@ -377,6 +376,7 @@ let Unlockables = class {
                 classObject.optionsShowPageULD(true);
                 return true;
             };
+            iV.enableInput(false,100);
         } else if (this.name==='lootboxemuBG') { // CLOSES LBE after its finished
             if (!classObject.lootBoxEmuFinished) return false; // if the emulator IS already running (ie NOT finished), ignore the click.
             // hiding the container
@@ -489,6 +489,16 @@ let Unlockables = class {
             let tempName = cardSetName.shift();
             cardSetName.push(tempName)
             cardSetName = cardSetName.join(' ');
+        };
+
+        if (cardSetName.includes('SOS')) {
+            cardSetName = cardSetName.replace('SOS','Satin');
+            cardSetName += ' (EASY)';
+        } else if (cardSetName.includes('OS')) {
+            cardSetName = cardSetName.replace('OS','');
+            cardSetName += ' (EASY)';
+        } else {
+            cardSetName += ' (HARD)';
         };
         return cardSetName;
     }
@@ -674,13 +684,21 @@ let Unlockables = class {
 
                 container.add([button,buttonText,unlockIcon,costText]);
                 cardSetGroup.addMultiple([button,buttonText,unlockIcon,costText]);
-            } else { //  // this CARD SET HAS been unlocked
+            } else { // this CARD SET HAS been unlocked
                 vars.DEBUG ? console.log(`%cUnlocked: ${_cS}`,`${consts.console.defaults}${consts.console.colours.good}`) : null;
-                let cardSetName = this.getCardSetName(_cS[0]);
-                let page = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage);
+
                 let csName = _cS[0];
-                let cardSetUnlocked = this.scene.add.image(this.ULd.x, this.ULd.y, csName, 'AH').setOrigin(1,0).setName(`CSU_${cardSetName}`).setData({ page: page, delete: true }).setInteractive();
+                let cardSetName = this.getCardSetName(csName);
+                let page = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage);
+                let visible = page ? false : true;
+
+
+                // show the cards ace of hearts
+                let cardSetUnlocked = this.scene.add.image(this.ULd.x, this.ULd.y, csName, 'AH').setOrigin(1,0).setName(`CSU_${cardSetName}`).setData({ page: page, delete: true }).setInteractive().setVisible(visible);
                 cardSetUnlocked.on('pointerup', this.click, cardSetUnlocked);
+                // add the name of the card set
+                let bC = cardSetUnlocked.getTopCenter();
+                let csText = this.scene.add.text(bC.x, bC.y+20, cardSetName.split(' '), { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange, align: 'center' }).setOrigin(0.5,0).setData({ page: page, delete: true }).setStroke(consts.htmlColours.blueDark, 3).setShadow(2, 2, "#333333", 2, true, true).setVisible(visible);
 
                 if (csName===gV.cardSet) { // this is the current card set
                     let bC = cardSetUnlocked.getBottomCenter();
@@ -689,10 +707,9 @@ let Unlockables = class {
                     page ? this.cardTick.setAlpha(0) : this.cardTick.setAlpha(1);
                 };
 
-                page ? cardSetUnlocked.setAlpha(0).setVisible(false) : null;
                 cardSetUnlocked.setData({ page: page, delete: true, cardSetName: _cS[0] });
                 this.ULd.unlockedCount++;
-                containerUL.add(cardSetUnlocked);
+                containerUL.add([cardSetUnlocked,csText]);
 
                 // increase x
                 this.ULd.x+this.ULd.xInc<this.ULd.xInc*5+this.ULd.xMin ? this.ULd.x += this.ULd.xInc : this.ULd.x=this.ULd.xMin;
@@ -744,7 +761,7 @@ let Unlockables = class {
                 let tintString = _tint[0];
                 let tintUnlocked = this.scene.add.image(this.ULd.x, this.ULd.y,'whitePixel').setOrigin(1,0).setTint(_tint[3]).setName(`TU_${tintString}`).setScale(this.ULd.tintWidth,this.ULd.tintHeight).setInteractive();
                 let tintFG = this.scene.add.image(this.ULd.x, this.ULd.y,'unlockUI','unlockedTintFG').setOrigin(1,0);
-                let tintText = this.scene.add.bitmapText(this.ULd.x-80,this.ULd.y+10,'defaultFontSmall',`TINT\n${tintString}`,20,1).setLetterSpacing(5).setName(`ulName_${tintString}`).setOrigin(0.5,0);
+                let tintText = this.scene.add.text(this.ULd.x-80,this.ULd.y+20,`TINT\n${tintString}`, { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange, align: 'center' }).setName(`ulName_${tintString}`).setOrigin(0.5,0).setStroke(consts.htmlColours.blueDark, 2).setShadow(2, 2, "#333333", 2, true, true);
                 tintUnlocked.on('pointerup', this.click, tintUnlocked);
                 let page = ~~(this.ULd.unlockedCount/this.ULd.maxPerPage);
                 if (page) {
@@ -831,7 +848,7 @@ let Unlockables = class {
         if (optionsVisible===unlockedVisible) return false; // both containers are either visible or invisible. This should NEVER happen
 
         // IF we get here one container is visible, ones invisible
-        let c1; let c2; // c1 is currently visible
+        let c1, c2; // c1 is currently visible
         if (optionsVisible) {
             c1 = optionsContainer;
             c2 = unlockedContainer;
@@ -857,9 +874,9 @@ let Unlockables = class {
                     targets: c2,
                     alpha: 1,
                     duration: 250
-                })
+                });
             }
-        })
+        });
     }
 
     unlockableShake(_objects) { // called from unlock specific when user doesnt have enough unlock points

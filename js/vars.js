@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 100.008',
+    revision: 'rev 102.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -92,6 +92,8 @@ var vars = {
         'Revision 095   - Keyboard input works on all pages now',
         'Revision 096   - Keyboard input now works on game screen. Starts timer on first good click',
         'Revision 097-100   - Card sets now unlock properly... at long fekn last o.0',
+        'Revision 101   - Unlocked card sets now show their names',
+        'Revision 102   - Fixed a bug with the hS P/N buttons caused by code on the gateway accidentally overwriting vars changed before git push',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -2160,7 +2162,9 @@ var vars = {
             },
             
             quickShow: (_show=true)=> { // quickly switch between alpha 1 and 0 (and 0 to 1)
-                let phaserObject = vars.input.cursor.phaserObject;
+                let iCV = vars.input.cursor;
+                iCV.timeout = iCV.timeoutMax;
+                let phaserObject = iCV.phaserObject;
                 let alpha = _show ? 1:0;
                 if (phaserObject.visible===_show && phaserObject.alpha===alpha) return false; // its already whatever was requested
                 phaserObject.setAlpha(alpha).setVisible(_show);
@@ -2314,27 +2318,71 @@ var vars = {
             let iV = vars.input;
             if (!iV.enabled) return 'Input currently disabled';
 
+            vars.input.cursor.quickShow(); // mouse clicks reset the cursor hide timer
+
             let gameObject = _gameObject;
 
             if (gameObject.name.startsWith('HSL_')) return false; // SCORECARD input is dealt with in its own class
 
+
+            // GAMEPLAY BUTTONS & CARDS
             if (gameObject.name.includes('card_')) { // a face up CARD has been clicked
                 iV.enableInput(false,200);
                 vars.game.deal.clickOnCard(gameObject);
                 return true;
-            }
-
+            };
             if (gameObject.name.startsWith('NG_')) { // NEW GAME option buttons
+                iV.enableInput(false,200);
                 iV.newGameOptionClicked(gameObject);
                 return true;
-            }
-
+            };
             if (gameObject.name.endsWith('Button_ui')) { // GAMEPLAY UI button
                 iV.enableInput(false,200);
                 iV.dealWithUIButtonClick(gameObject);
                 return true;
-            }
+            };
+            if (gameObject.name==='game_fg') {
+                vars.DEBUG ? console.warn(`This is the foreground for the game area. This should not be visible during gameplay!`) : null;
+                return true;
+            };
 
+
+            // HIGH SCORE TABLES BUTTONS
+            if (gameObject.name.endsWith('_HSTB')) { // HIGH SCORE TABLE button
+                iV.enableInput(false,100);
+                iV.highScoreTableButtonClick(gameObject);
+                return true;
+            };
+            if (gameObject.name==='WD_enterName') { // WELL DONE SCREEN button
+                iV.enableInput(false,200);
+                delete(iV.pageButtons.wellDone); // this button is destroyed, so remove it from the pageButtons
+                vars.audio.playSound('buttonClick');
+                vars.UI.wellDoneDestroy();
+                vars.containers.show('wellDone', false);
+                // move the shader image to the input container
+                let sC = vars.game.scoreCard;
+                sC.moveShaderToNewContainer('inputName');
+                sC.enableNameEntry(true);
+                sC.inputContainer.setVisible(true);
+                return true;
+            };
+            if (gameObject.name.startsWith('hSSolutionID_')) { // REPLAY SOLUTION BUTTON ON HIGH SCORE TABLE
+                iV.enableInput(false); // re-enabled when deal is done
+                vars.localStorage.loadSolution(gameObject.name);
+                return true;
+            };
+            if (gameObject.name==='highScoreTableBG' && !vars.containers.ignoreLoop) { // the main screens are looping and the player clicked on the high score bg
+                iV.enableInput(false,200);
+                let cV = vars.containers;
+                cV.show('highScoreTable', false);
+                cV.show('mainScreen', true);
+
+                // reset the container vars
+                cV.resetLoopVarsOnContainerQuickSwitch();
+            };
+
+
+            // MAIN SCREEN
             if (gameObject.name.startsWith('MS_') && !gameObject.name.endsWith('moreInfoButton')) { // MAIN SCREEN buttons
                 let iV = vars.input;
                 if (gameObject.name==='MS_newGame') { iV.enableInput(false); } else { iV.enableInput(false,200); }
@@ -2382,54 +2430,6 @@ var vars = {
                     return true;
                 };
             };
-
-            if (gameObject.name==='WD_enterName') { // WELL DONE SCREEN button
-                iV.enableInput(false,200);
-                delete(iV.pageButtons.wellDone); // this button is destroyed, so remove it from the pageButtons
-                vars.audio.playSound('buttonClick');
-                vars.UI.wellDoneDestroy();
-                vars.containers.show('wellDone', false);
-                // move the shader image to the input container
-                let sC = vars.game.scoreCard;
-                sC.moveShaderToNewContainer('inputName');
-                sC.enableNameEntry(true);
-                sC.inputContainer.setVisible(true);
-                return true;
-            }
-
-            if (gameObject.name.endsWith('_HSTB')) { // HIGH SCORE TABLE button
-                iV.enableInput(false,100);
-                iV.highScoreTableButtonClick(gameObject);
-                return true;
-            }
-
-            if (gameObject.name.startsWith('hSSolutionID_')) { // REPLAY SOLUTION BUTTON ON HIGH SCORE TABLE
-                iV.enableInput(false); // re-enabled when deal is done
-                vars.localStorage.loadSolution(gameObject.name);
-                return true;
-            }
-
-            if (gameObject.name==='game_fg') {
-                vars.DEBUG ? console.warn(`This is the foreground for the game area. This should not be visible during gameplay!`) : null;
-                return true;
-            }
-
-            if (gameObject.name==='highScoreTableBG' && !vars.containers.ignoreLoop) { // the main screens are looping and the player clicked on the high score bg
-                iV.enableInput(false,200);
-                let cV = vars.containers;
-                cV.show('highScoreTable', false);
-                cV.show('mainScreen', true);
-
-                // reset the container vars
-                cV.resetLoopVarsOnContainerQuickSwitch();
-            }
-
-            if (gameObject.name.startsWith('options_')) {
-                iV.enableInput(false,200);
-                iV.optionsClick(gameObject);
-                return true;
-            }
-
             if (gameObject.name.endsWith('moreInfoButton')) { // more info button is a special case as its held in a few different containers (currently only mainScreen)
                 if (gameObject.name.startsWith('MS_')) { // main screen version of the button
                     iV.enableInput(false,200);
@@ -2441,13 +2441,22 @@ var vars = {
                 return true;
             };
 
+            
+            // SCROLLERS (MORE INFO ETC)
             if (gameObject.name.startsWith('SCRL_')) { // buttons associated with the scroller class
                 iV.enableInput(false,200);
                 vars.scrollers.available.Rules.click(gameObject.name);
                 return true;
             };
 
+
             // UNLOCKED AND UNLOCKABLES ON OPTIONS SCREEN
+            // OPTIONS
+            if (gameObject.name.startsWith('options_')) { // OPTIONS SCREEN BUTTONS
+                iV.enableInput(false,200);
+                iV.optionsClick(gameObject);
+                return true;
+            };
             if (gameObject.name==='unlockablesHeader' || gameObject.name==='lootboxemuBG') return false; // DEALT WITH IN UNLOCKABLES CLASS
             // UNLOCK SPECIFIC (CARDSET/TINT)
             if (gameObject.name.startsWith('unlock_cS_') || gameObject.name.startsWith('unlock_cSUI_')) {
@@ -2460,8 +2469,7 @@ var vars = {
                 vars.game.unlockables.unlockSpecific(gameObject,'tint');
                 return true;
             };
-
-            if (gameObject.name.startsWith('warn_')) {
+            if (gameObject.name.startsWith('warn_')) { // WARNING SCREEN BUTTONS
                 if (gameObject.name.includes('dontShowAgain')) { // we need to save the fact that the user doesnt want to see this message again
                     vars.localStorage.saveDontShowAgain();
                 } else if (gameObject.name.includes('OK')) {
@@ -2472,17 +2480,19 @@ var vars = {
                 };
                 // hide the warning container and reset some alphas
                 vars.UI.showDifficultyWarning(false);
+                // NOTE: the function above deals with enabling/disabling input. So it isnt needed here
                 return true;
             };
-
             // UNLOCKED BUTTONS (dealt with in unlockables)
             if (gameObject.name.startsWith('UNL_') || gameObject.name.startsWith('UNLD_') || gameObject.name.startsWith('CSU_') || gameObject.name.startsWith('TU_')) return false;
 
-            
+
+
 
             // KEYBOARD "BUTTONS"
             // SOME BUTTONS HAVE INLINE HANDLERS THAT CAN BE . THOSE ARE DEALT WITH HERE
             if (gameObject.name==='unlockablesHeader_button') {
+                iV.enableInput(false,200);
                 vars.input.switchVisibleUnlocksContainer();
                 return true;
             };
@@ -4125,7 +4135,7 @@ var vars = {
 
         },
 
-        mainScreenFadeIn: ()=> {
+        mainScreenFadeIn: ()=> { // can be safely deleted TODO
 
         },
 
