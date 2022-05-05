@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 102.008',
+    revision: 'rev 103.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -94,6 +94,7 @@ var vars = {
         'Revision 097-100   - Card sets now unlock properly... at long fekn last o.0',
         'Revision 101   - Unlocked card sets now show their names',
         'Revision 102   - Fixed a bug with the hS P/N buttons caused by code on the gateway accidentally overwriting vars changed before git push',
+        'Revision 103   - gimme2k now animates the UP increase. Modified a couple of functions to allow updateing points over time on mS only',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -1265,10 +1266,37 @@ var vars = {
             })
         },
 
+        gimme2KGreyToColour: ()=> {
+            if (!vars.localStorage.unlocked) return false;
+            let p = vars.shaders.getGrayScalePipeLine();
+            let c = vars.containers.getByName('mainScreen');
+            let i = c.getByName('MST_boughtText');
+            scene.tweens.addCounter({
+                from: 1, to: 0,
+                duration: 1000,
+                onUpdate: (_t,_v)=> { p.get(i)[0].setIntensity(_v.value); },
+                onComplete: ()=> { vars.input.enableBuyButton(true); }
+            });
+        },
+        
+        gimme2KColourToGrey: ()=> {
+            if (!vars.localStorage.unlocked) return false;
+            let p = vars.shaders.getGrayScalePipeLine();
+            let c = vars.containers.getByName('mainScreen');
+            let i = c.getByName('MST_boughtText');
+            scene.tweens.addCounter({
+                from: 0, to: 1,
+                duration: 250,
+                onUpdate: (_t,_v)=> { p.get(i)[0].setIntensity(_v.value); },
+                onComplete: ()=> { vars.input.enableBuyButton(false); }
+            });
+        },
+
         mainPageUPCount: (_init=true)=> {
             let unlockPoints = vars.game.unlockPoints;
             if (!unlockPoints) return false;
 
+            // the fromTo var will be 0-UP (when mS is first shown) or UP-newUP (when 2000 UP's are requested by the player)
             let fromTo = [0,unlockPoints];
             if (!_init) { // we need the current count visible on main screen
                 let currentUPCount = ~~(scene.containers.mainScreen.getByName(`playersUPCountMainScreen`).text.split(' ')[0]);
@@ -1282,7 +1310,7 @@ var vars = {
                 // update the UP count
                 onUpdate: (_t,_v)=> {
                     let currentCount = ~~_v.value;
-                    if (~~_v.value>100000) { currentCount = '>99999'; };
+                    if (~~_v.value>=100000) { currentCount = '>99999'; };
                     scene.containers.mainScreen.getByName(`playersUPCountMainScreen`).setText(`${currentCount} Unlock Points`);
                 },
                 onStart: vars.anims.gimme2KColourToGrey,
@@ -1320,32 +1348,6 @@ var vars = {
                 } else {
                     console.error(`Unknown object (${_o.name}) !`);
                 }
-            });
-        },
-
-        gimme2KGreyToColour: ()=> {
-            if (!vars.localStorage.unlocked) return false;
-            let p = vars.shaders.getGrayScalePipeLine();
-            let c = vars.containers.getByName('mainScreen');
-            let i = c.getByName('MST_boughtText');
-            scene.tweens.addCounter({
-                from: 1, to: 0,
-                duration: 1000,
-                onUpdate: (_t,_v)=> { p.get(i)[0].setIntensity(_v.value); },
-                onComplete: ()=> { vars.input.enableBuyButton(true); }
-            });
-        },
-        
-        gimme2KColourToGrey: ()=> {
-            if (!vars.localStorage.unlocked) return false;
-            let p = vars.shaders.getGrayScalePipeLine();
-            let c = vars.containers.getByName('mainScreen');
-            let i = c.getByName('MST_boughtText');
-            scene.tweens.addCounter({
-                from: 0, to: 1,
-                duration: 250,
-                onUpdate: (_t,_v)=> { p.get(i)[0].setIntensity(_v.value); },
-                onComplete: ()=> { vars.input.enableBuyButton(false); }
             });
         }
     },
@@ -2420,10 +2422,12 @@ var vars = {
 
                 if (gameObject.name==='MS_buy') {
                     if (vars.localStorage.unlocked) { // game has been bought, give 2000UPs
+                        let uLC = vars.game.unlockables;
                         vars.game.unlockPoints += 2000;
                         vars.localStorage.updateUnlockPoints();
-                        vars.game.unlockables.showRandomRollButton();
-                        vars.game.unlockables.updateUIUnlockPoints();
+                        uLC.showRandomRollButton();
+                        uLC.updateUIUnlockPoints(true); // TRUE means ignore the mS UP count, as we'll be doing that next (via an anim)
+                        vars.anims.mainPageUPCount(false);
                     } else {
                         vars.DEBUG ? console.log(`BUY button doesnt currently do anything. Itll eventually allow you to buy the game for £1.99`) : null;
                     };

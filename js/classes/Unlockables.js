@@ -967,12 +967,14 @@ let Unlockables = class {
         return false;
     }
 
-    updateUIUnlockPoints() {
+    updateUIUnlockPoints(_ignoreMainScreen=false) {
         let UPs = vars.game.unlockPoints;
+        let cV = vars.containers;
         UPs>99999 ? UPs='>99999' : null;
-        vars.containers.getByName('optionsScreen').getByName(`optionsScreenUPCount`).setText(UPs);
-        vars.containers.getByName('gamePlayingUI').getByName(`playersUPCount`).setText(UPs);
-        vars.containers.getByName('mainScreen').getByName(`playersUPCountMainScreen`).setText(`${UPs} Unlock Points`);
+        cV.getByName('optionsScreen').getByName(`optionsScreenUPCount`).setText(UPs);
+        cV.getByName('gamePlayingUI').getByName(`playersUPCount`).setText(UPs);
+        // if ignore is set to true, this is being requested by give2K which deals with updating the mS UP count itself
+        !_ignoreMainScreen ? cV.getByName('mainScreen').getByName(`playersUPCountMainScreen`).setText(`${UPs} Unlock Points`) : null;
     }
 
     useUnlockPoints(_points) { // currently only used by randomRoll, but will be used for outright unlocking
