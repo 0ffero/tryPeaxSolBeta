@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 104.008',
+    revision: 'rev 105.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -96,6 +96,8 @@ var vars = {
         'Revision 102   - Fixed a bug with the hS P/N buttons caused by code on the gateway accidentally overwriting vars changed before git push',
         'Revision 103   - gimme2k now animates the UP increase. Modified a couple of functions to allow updateing points over time on mS only',
         'Revision 104   - Added some sound effects. Change pages, close buttons, mS buttons',
+        'Revision 105   - More sound effects for lock/unlock page switch. Page flip sound for pages with more than 1 page (UL). Unlock sound added.',
+        '                   - NOTE: I was gonna show the warning message when unlocking a non OS cS, but I dont load said card set on unlock. Only when they decide to use it... which is fine.',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -136,27 +138,12 @@ var vars = {
             ['cardsDealt','cardsLeft','cardCurrent'].forEach((_g)=> {
                 groups[_g].list.forEach((_c)=> {
                     let cName = _c.name;
-                    a = cName[cName.length-1]
+                    let a = cName[cName.length-1]
                     cards[a].push(cName);
                     cards[a].sort();
                 });
             });
             console.table(cards);
-        },
-
-        move: ()=> {
-            return false;
-            let dV = vars.debug;
-            if (!dV.overlayBG.visible) return false;
-
-            let xy = [0,0];
-            if (scene.cursors.left.isDown) { xy[0] = -50; } else if (scene.cursors.right.isDown) { xy[0] = 50; };
-            if (scene.cursors.up.isDown) { xy[1] = -50; } else if (scene.cursors.down.isDown) { xy[1] = 50; };
-
-            dV.overlayBG.x+=xy[0];
-            dV.overlayBG.y+=xy[1];
-            dV.overlayObject.x+=xy[0];
-            dV.overlayObject.y+=xy[1];
         },
 
         switchOverlayVisibility: ()=> {
@@ -176,7 +163,6 @@ var vars = {
             
             dV.delay=dV.delayMax;
             dV.updateOverlay();
-            dV.move();
         },
 
         updateOverlay: ()=> {
@@ -379,6 +365,10 @@ var vars = {
                 
                 scene.load.audio('multiplierReset', `${folder}/multiplierReset.ogg`);
                 scene.load.audio('pageFlip', `${folder}/pageFlip.ogg`);
+                scene.load.audio('unlockLockedUnlockable', `${folder}/unlockLockedUnlockable.ogg`); // when you have to be specific XD
+                scene.load.audio('unlockClick', `${folder}/unlockClick.ogg`);
+                scene.load.audio('lockClick', `${folder}/lockClick.ogg`);
+
 
 
                 Phaser.Utils.Array.NumberArray(0,9,'newCard').forEach((_key)=> {
@@ -2470,14 +2460,13 @@ var vars = {
                 iV.optionsClick(gameObject);
                 return true;
             };
-            if (gameObject.name==='unlockablesHeader' || gameObject.name==='lootboxemuBG') return false; // DEALT WITH IN UNLOCKABLES CLASS
-            // UNLOCK SPECIFIC (CARDSET/TINT)
-            if (gameObject.name.startsWith('unlock_cS_') || gameObject.name.startsWith('unlock_cSUI_')) {
+            // UNLOCK SPECIFIC
+            if (gameObject.name.startsWith('unlock_cS_') || gameObject.name.startsWith('unlock_cSUI_')) { // UNLOCK A SPECIFIC CARDSET
                 // request an unlock
                 iV.enableInput(false,200);
                 vars.game.unlockables.unlockSpecific(gameObject,'cardSet');
                 return true;
-            } else if (gameObject.name.startsWith('unlock_tint_') || gameObject.name.startsWith('unlock_tintUI_')) {
+            } else if (gameObject.name.startsWith('unlock_tint_') || gameObject.name.startsWith('unlock_tintUI_')) { // UNLOCK A SPECIFIC TINT
                 iV.enableInput(false,200);
                 vars.game.unlockables.unlockSpecific(gameObject,'tint');
                 return true;
@@ -2496,8 +2485,10 @@ var vars = {
                 // NOTE: the function above deals with enabling/disabling input. So it isnt needed here
                 return true;
             };
-            // UNLOCKED BUTTONS (dealt with in unlockables)
+            // UNLOCKED/UNLOCKABLES BUTTONS (dealt with in unlockables)
             if (gameObject.name.startsWith('UNL_') || gameObject.name.startsWith('UNLD_') || gameObject.name.startsWith('CSU_') || gameObject.name.startsWith('TU_')) return false;
+            // LBE. AND CHANGING from unlockables to unlocked (& vice-versa)
+            if (gameObject.name==='unlockablesHeader' || gameObject.name==='lootboxemuBG') return false;
 
 
 
@@ -2613,12 +2604,13 @@ var vars = {
         },
 
         newGameOptionClicked: (_gameObject)=> { // ON WINNING; UI SHOWN AFTER HIGH SCORE TABLE IS HIDDEN
-            vars.audio.playSound('buttonClick');
             let iV = vars.input;
             let buttonName = _gameObject.name.replace('NG_','').replace('_Button_ui','');
+            let audioClip = buttonName==='CANCEL' || buttonName==='EXIT' ? 'multiplierReset' : 'buttonClick';
+            buttonName==='NEWDEAL' ? iV.enableInput(false) : iV.enableInput(false,200);
+            vars.audio.playSound(audioClip);
             switch (buttonName) {
                 case 'CANCEL':
-                    iV.enableInput(false,200);
                     vars.containers.show('NGoptions',false);
                     vars.containers.showNGOnFail(false);
                     return;
@@ -2626,7 +2618,6 @@ var vars = {
 
                 case 'NEWDEAL':
                     // new deal clicked
-                    iV.enableInput(false);
                     vars.containers.showNG(false);
                     vars.containers.showNGOnFail(false);
                     // start a new game
@@ -2635,14 +2626,12 @@ var vars = {
                 break;
 
                 case 'HIGHSCORES':
-                    iV.enableInput(false,200);
                     vars.game.scoreCard.showHighScoreTable(true);
                     vars.containers.showNGOnFail(false);
                     return true;
                 break;
 
                 case 'HOME':
-                    iV.enableInput(false,200);
                     vars.containers.showNGOnFail(false);
                     vars.containers.startIntroLoop(true);
                     vars.UI.showMainScreen();
@@ -2650,8 +2639,6 @@ var vars = {
                 break;
 
                 case 'EXIT':
-                    vars.audio.playSound('multiplierReset');
-                    iV.enableInput(false,200); // this should really disable all input indefinitely as the exit button will call an android function to close the window
                     // possible TODO but will not make any difference as the game is exiting completely
                     console.log('Exiting game!\nGoodbye.');
                     return false;

@@ -352,9 +352,18 @@ let Unlockables = class {
         });
     }
 
+    buildPages() { // shortcut to rebuildPages. the fn name just makes more sense the first time "rebuild" is called
+        this.rebuildPages();
+    }
+
+
+    // CLICK FUNCTIONS FOR
+    // NEXT and PREVIOUS buttons on UL & ULD screens
+    // LBE START and CLOSE
+    // UNLOCKED CARDSETS and TINTS
     click () {
         let iV = vars.input;
-        if (!iV.enabled) return '%cInput is currently disabled!','color: #FF0000';
+        if (!iV.enabled) return 'Input is currently disabled!';
 
         // as we enter here from a phaser click, "this" is actually the sprite, NOT this class
         let gV = vars.game;
@@ -396,7 +405,7 @@ let Unlockables = class {
         } else if (this.name.startsWith('CSU_') || this.name.startsWith('TU_')) { // UNLOCKED CARD SET OR TINT CLICKED ON
             if (this.name.startsWith('CSU_')) {
                 iV.enableInput(false,200);
-                console.log(`Unlocked card set clicked on. Swapping current card set with this one.`);
+                vars.DEBUG ? console.log(`Unlocked card set clicked on. Swapping current card set with this one.`) : null;
                 
                 let cardSetName = this.getData('cardSetName');
                 // save card set selection to lS and update the gV
@@ -405,7 +414,7 @@ let Unlockables = class {
                 // move the tick to the new card set
                 gV.unlockables.moveCardTick(this);
 
-                // save the card set name, replace the card set image and json & show pop up while loading
+                // save the card set name, THEN load the new card set AND Show pop up while loading
                 gV.setCardSet(cardSetName);
 
                 return true;
@@ -424,10 +433,6 @@ let Unlockables = class {
         };
 
         vars.DEBUG ? console.log(`Button ${this.name} has no handler!`) : null;
-    }
-
-    buildPages() { // shortcut to rebuildPages. the fn name just makes more sense the first time "rebuild" is called
-        this.rebuildPages();
     }
 
     destroyAllPages() {
@@ -850,14 +855,17 @@ let Unlockables = class {
         if (optionsVisible===unlockedVisible) return false; // both containers are either visible or invisible. This should NEVER happen
 
         // IF we get here one container is visible, ones invisible
-        let c1, c2; // c1 is currently visible
+        let c1, c2, audioClip; // c1 is currently visible
         if (optionsVisible) {
             c1 = optionsContainer;
             c2 = unlockedContainer;
+            audioClip = 'unlockClick';
         } else {
             c1 = unlockedContainer;
             c2 = optionsContainer;
+            audioClip = 'lockClick';
         };
+        vars.audio.playSound(audioClip);
 
         let frame = optionsVisible ? 'unlockedHeader' : 'unlockablesHeader';
         let container = scene.containers.optionsScreen;
@@ -1189,63 +1197,6 @@ let Unlockables = class {
         });
     }
 
-    unlockRandomRoll(_rR=true,_ulName=null) { // AFTER HIDING NOT WONs WE SAVE THE UNLOCKABLE AS UNLOCKED, REMOVE IT FROM THE unlockKeys,available and unlockableSet
-        vars.DEBUG ? console.log(`LOOTBOXEMU: Unlocking random roll!`) : null;
-        let unlockID = _rR ? this.unlockName.getData('actualID') : _ulName;
-        if (!_rR && !unlockID) return false;
-
-        this.unlockableSet[unlockID].unlocked=true;
-
-        // remove this unlockable from the unlockKeys (used by the LOOT BOX EMULATOR)
-        this.unlockKeys.every((_ulName,_i)=> {
-            if (_ulName===unlockID) {
-                vars.DEBUG ? console.log(`Found unlock ${_ulName} at index ${_i}. Removing it from the unlockKeys array.`) : null;
-                this.unlockKeys.splice(_i,1);
-                return true;
-            };
-            return true;
-        });
-        
-        // UPDATE THE AVAILABLE VAR (WHICH IS USED TO REBUILD THE PAGES)
-        let searchingFor = '';
-        let available = null;
-        if (unlockID.startsWith('tint')) {
-            searchingFor = unlockID.replace('tint','');
-            available = this.available.tints;
-        } else if (unlockID.startsWith('cS')) {
-            searchingFor = unlockID.replace('cS','');
-            available = this.available.cardSets;
-        } else { // unknown unlockable type
-            console.error('Unknown unlock type!');
-            return false;
-        };
-
-        if (searchingFor && available) { // once weve set the "searching for" var and the "array set" were looping thru
-            let lV = vars.localStorage;
-            available.every((_t,_i)=> {
-                if (searchingFor===_t[0]) { // this is the unlock we're looking for
-                    _t[1]=true; // set it to "unlocked"
-                    let unlockIDInteger = _t[2]; // this int is saved and is the unlock integer
-                    this.ULInts.push(unlockIDInteger); // push it into the unlocked's
-                    lV.saveUnlockIDs(this.ULInts); // save the unlocked list
-                    return true; // we found the var and updated it, exit the loop
-                };
-                return true; // keep looping through "available" until the above return is fired
-            });
-
-            // save the new unlockable set
-            lV.saveUnlocks(this.unlockableSet);
-
-            if (!_rR) return true;
-
-            // we now need to rebuild the pages if this was a random roll (other screens do this themselves)
-            vars.DEBUG ? console.log(`REBUILDING THE UNLOCKABLE and UNLOCKED PAGES`) : null;
-            this.rebuildPages();
-        } else {
-            console.error(`Searching for (${searchingFor}) or available array isnt valid!`);
-        };
-    }
-
     scrollerZoomInOnWin() { // ZOOMS INTO THE WINNING UNLOCK
         let cam = scene.cameras.main;
         if (cam.zoom!==1) return false;
@@ -1336,5 +1287,66 @@ let Unlockables = class {
         
         container.setPosition(0,0).setAlpha(0).setVisible(false); // reset the angle, alpha and visibility
         vars.input.enableInput(true); // enable input
+    }
+
+    unlockRandomRoll(_rR=true,_ulName=null) { // AFTER HIDING NOT WONs WE SAVE THE UNLOCKABLE AS UNLOCKED, REMOVE IT FROM THE unlockKeys,available and unlockableSet
+        vars.DEBUG ? console.log(`LOOTBOXEMU: Unlocking random roll!`) : null;
+        let unlockID = _rR ? this.unlockName.getData('actualID') : _ulName;
+        if (!_rR && !unlockID) return false;
+
+        this.unlockableSet[unlockID].unlocked=true;
+
+        // remove this unlockable from the unlockKeys (used by the LOOT BOX EMULATOR)
+        this.unlockKeys.every((_ulName,_i)=> {
+            if (_ulName===unlockID) {
+                vars.DEBUG ? console.log(`Found unlock ${_ulName} at index ${_i}. Removing it from the unlockKeys array.`) : null;
+                this.unlockKeys.splice(_i,1);
+                return true;
+            };
+            return true;
+        });
+        
+        // UPDATE THE AVAILABLE VAR (WHICH IS USED TO REBUILD THE PAGES)
+        let searchingFor = '';
+        let available = null;
+        if (unlockID.startsWith('tint')) {
+            searchingFor = unlockID.replace('tint','');
+            available = this.available.tints;
+        } else if (unlockID.startsWith('cS')) {
+            searchingFor = unlockID.replace('cS','');
+            available = this.available.cardSets;
+        } else { // unknown unlockable type
+            console.error('Unknown unlock type!');
+            return false;
+        };
+
+        if (searchingFor && available) { // once weve set the "searching for" var and the "array set" were looping thru
+            let lV = vars.localStorage;
+            available.every((_t,_i)=> {
+                if (searchingFor===_t[0]) { // this is the unlock we're looking for
+                    _t[1]=true; // set it to "unlocked"
+                    let unlockIDInteger = _t[2]; // this int is saved and is the unlock integer
+                    this.ULInts.push(unlockIDInteger); // push it into the unlocked's
+                    lV.saveUnlockIDs(this.ULInts); // save the unlocked list
+                    return true; // we found the var and updated it, exit the loop
+                };
+                return true; // keep looping through "available" until the above return is fired
+            });
+
+            // save the new unlockable set
+            lV.saveUnlocks(this.unlockableSet);
+
+            vars.audio.playSound('unlockLockedUnlockable');
+
+            if (!_rR) return true;
+
+            // we now need to rebuild the pages if this was a random roll (other screens do this themselves)
+            vars.DEBUG ? console.log(`REBUILDING THE UNLOCKABLE and UNLOCKED PAGES`) : null;
+            this.rebuildPages();
+            return true;
+        } else {
+            console.error(`Searching for (${searchingFor}) or available array isnt valid!`);
+            return false;
+        };
     }
 }
