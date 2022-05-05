@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 103.008',
+    revision: 'rev 104.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -95,6 +95,7 @@ var vars = {
         'Revision 101   - Unlocked card sets now show their names',
         'Revision 102   - Fixed a bug with the hS P/N buttons caused by code on the gateway accidentally overwriting vars changed before git push',
         'Revision 103   - gimme2k now animates the UP increase. Modified a couple of functions to allow updateing points over time on mS only',
+        'Revision 104   - Added some sound effects. Change pages, close buttons, mS buttons',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -371,8 +372,14 @@ var vars = {
                 let folder = 'sounds';
                 aV.available.newCard = [];
 
+                // High Score Entry sounds
                 scene.load.audio('deleteLetter', `${folder}/deleteLetter.ogg`);
                 scene.load.audio('acceptName', `${folder}/acceptName.ogg`);
+
+                
+                scene.load.audio('multiplierReset', `${folder}/multiplierReset.ogg`);
+                scene.load.audio('pageFlip', `${folder}/pageFlip.ogg`);
+
 
                 Phaser.Utils.Array.NumberArray(0,9,'newCard').forEach((_key)=> {
                     scene.load.audio(_key, `${folder}/${_key}.ogg`);
@@ -2390,9 +2397,11 @@ var vars = {
                 if (gameObject.name==='MS_newGame') { iV.enableInput(false); } else { iV.enableInput(false,200); }
 
                 let cV = vars.containers;
+                
+                vars.audio.playSound('buttonClick');
+
                 if (gameObject.name === 'MS_newGame') {
                     cV.ignoreLoop=true;
-                    vars.audio.playSound('buttonClick');
                     cV.show('mainScreen', false);
                     vars.init('STARTAPP'); // start the app
                     return true;
@@ -2565,6 +2574,7 @@ var vars = {
 
                 case 'close_HSTB': // close the high score table
                     vars.DEBUG ? console.log(` >>> Closing High Score Table`) : null;
+                    vars.audio.playSound('multiplierReset');
 
                     // pull the buttons back in 
                     let duration = 1;
@@ -2602,7 +2612,7 @@ var vars = {
             }
         },
 
-        newGameOptionClicked: (_gameObject)=> { // ON WINNING UI SHOWN AFTER HIGH SCORE TABLE IS HIDDEN
+        newGameOptionClicked: (_gameObject)=> { // ON WINNING; UI SHOWN AFTER HIGH SCORE TABLE IS HIDDEN
             vars.audio.playSound('buttonClick');
             let iV = vars.input;
             let buttonName = _gameObject.name.replace('NG_','').replace('_Button_ui','');
@@ -2640,6 +2650,7 @@ var vars = {
                 break;
 
                 case 'EXIT':
+                    vars.audio.playSound('multiplierReset');
                     iV.enableInput(false,200); // this should really disable all input indefinitely as the exit button will call an android function to close the window
                     // possible TODO but will not make any difference as the game is exiting completely
                     console.log('Exiting game!\nGoodbye.');
@@ -2685,6 +2696,7 @@ var vars = {
             };
 
             if (name==='options_close') { // CLOSE OPTIONS SCREEN BUTTON
+                vars.audio.playSound('multiplierReset');
                 let cV = vars.containers;
                 cV.show('optionsScreen',false);
 

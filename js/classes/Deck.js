@@ -81,6 +81,7 @@ let Deck = class {
     }
 
     resetStreak() {
+        this.currentStreak > 1 ? vars.audio.playSound('multiplierReset.ogg') : null;
         this.currentStreak=0;
         this.realStreak=0;
         vars.UI.updateMultiplier(this.currentStreak);

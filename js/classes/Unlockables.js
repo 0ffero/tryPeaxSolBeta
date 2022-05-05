@@ -543,6 +543,7 @@ let Unlockables = class {
     }
 
     optionsShowPage(_next=true) { // show a specific page of UNLOCKS.
+        vars.audio.playSound('pageFlip');
         // NOTE: We can only enter here if there IS more than 1 page (as the previous and next buttons will be invisible otherwise)
         // HIDE THE CURRENT PAGE
         let page = this.unlockableSets[`page_${this.currentPage}`];
@@ -575,6 +576,7 @@ let Unlockables = class {
     }
 
     optionsShowPageULD(_next=true) { // show a specific page of UNLOCKEDS.
+        vars.audio.playSound('pageFlip');
         // HIDE THE CURRENT PAGE
         let container = this.containers.unlocked;
 

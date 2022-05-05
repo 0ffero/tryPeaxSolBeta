@@ -507,6 +507,7 @@ let ScoreCard = class {
     }
 
     showHighScorePage(_next=true) {
+        vars.audio.playSound('pageFlip');
         this.oldPage = this.currentPage;
         if (_next) { // show the next page
             this.currentPage < this.totalPages ? this.currentPage++ : this.currentPage=1;
