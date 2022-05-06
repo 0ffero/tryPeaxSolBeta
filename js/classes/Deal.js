@@ -566,7 +566,7 @@ let Deal = class {
                 if (_o[0].data.list['position']===52) {
                     this.allCardsDealt=true; // let the ai know the cards have been dealt
                     // re-enable input
-                    vars.input.enableInput(true);
+                    !vars.AI.current ? vars.input.enableInput(true) : null;
                     
                     // cache the face up cards
                     vars.game.deal.getAllFaceUpCards();

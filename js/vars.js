@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 106.008',
+    revision: 'rev 107.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -99,6 +99,7 @@ var vars = {
         'Revision 105   - More sound effects for lock/unlock page switch. Page flip sound for pages with more than 1 page (UL). Unlock sound added.',
         '                   - NOTE: I was gonna show the warning message when unlocking a non OS cS, but I dont load said card set on unlock. Only when they decide to use it... which is fine.',
         'Revision 106   - Fixed a couple of bugs',
+        'Revision 107   - Bug fixes. The cards were becoming clickable after showing a hidden card. The game play ui wasnt being shown due to an earlier change hiding it until gameplay is actually needed',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -612,7 +613,7 @@ var vars = {
                 scene.containers[_container].setVisible(_show).setAlpha(alpha);
                 if (_container==='mainScreen' && !_show) {
                     vars.particles.available.letterSparkle.pause();
-                    vars.particles.available.letterSparkle.emitters.list[0].killAll()
+                    vars.particles.available.letterSparkle.emitters.list[0].killAll();
                  } else if (_container==='mainScreen' && _show) {
                     vars.particles.available.letterSparkle.resume();
                  };
@@ -1224,6 +1225,8 @@ var vars = {
         destroy: ()=> { // AI's come here to die. Its quick and easy, so theres that...
             // Plus. The AI did actually request this.
             vars.AI.current=null;
+            // re-enable input (only possible after nullifying AI.current)
+            vars.input.enableInput(true);
         }
     },
 

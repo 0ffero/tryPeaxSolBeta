@@ -116,8 +116,9 @@ let AI = class {
         vars.DEBUG ? console.log(`Getting the UI Ready!`) : null;
         this.hideTheContainers();
         this.buildDeckAndDeal();
+        this.showGameplayUI(true); // shows the actual container
         // fade out stuff thats no applicable on the game play ui
-        vars.UI.showGameplayUI(false,0,'ai');
+        vars.UI.showGameplayUI(false,0,'ai'); // hides buttons unused by AI
     }
 
     hideTheContainers(_hide=true) {
@@ -215,6 +216,12 @@ let AI = class {
         });
     }
 
+    showGameplayUI(_show=true) {
+        let cV = vars.containers;
+        _show ? cV.getByName('gamePlayingUI').setVisible(true).setAlpha(1) : cV.getByName('gamePlayingUI').setVisible(false).setAlpha(0);
+        return true;
+    }
+
     solve() {
         vars.DEBUG ? console.log(`Doing solve!`) : null;
         this.playNextMove(); // this plays EVERY move
@@ -243,6 +250,8 @@ let AI = class {
                 onComplete: vars.AI.current.waitForDeal
             });
         };
+
+
     }
 
     destroy() { // ABANDON ALL HOPE, YE WHO ENTER HERE... (SPECIALLY AI's)
@@ -273,6 +282,7 @@ let AI = class {
                         vars.UI.showGameplayUI(true);
                         // show the fg, main screen and highscore table again
                         vars.AI.current.hideTheContainers(false);
+                        this.showGameplayUI(false);
                         this.alive=false;
                         vars.AI.destroy();
                     }
