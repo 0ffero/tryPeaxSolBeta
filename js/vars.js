@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 105.008',
+    revision: 'rev 106.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -98,6 +98,7 @@ var vars = {
         'Revision 104   - Added some sound effects. Change pages, close buttons, mS buttons',
         'Revision 105   - More sound effects for lock/unlock page switch. Page flip sound for pages with more than 1 page (UL). Unlock sound added.',
         '                   - NOTE: I was gonna show the warning message when unlocking a non OS cS, but I dont load said card set on unlock. Only when they decide to use it... which is fine.',
+        'Revision 106   - Fixed a couple of bugs',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -252,8 +253,7 @@ var vars = {
     },
 
     BUGS: [
-        'When viewing a replay of a game after entering your name, the multiplier etc is faded out. This is because youve won a game, so alphas are already set low. Hence ignoring the bonusFG etc IS simply leaving them as is.',
-        'Fix: On replay reset everything to 1 alpha then fade everything out again. This might need to be "remembered" so we can fade out the appropriate stuff for the next game.'
+        'When clicking cancel after bring up the '
     ],
 
     TODO: [
@@ -2607,7 +2607,7 @@ var vars = {
             let iV = vars.input;
             let buttonName = _gameObject.name.replace('NG_','').replace('_Button_ui','');
             let audioClip = buttonName==='CANCEL' || buttonName==='EXIT' ? 'multiplierReset' : 'buttonClick';
-            buttonName==='NEWDEAL' ? iV.enableInput(false) : iV.enableInput(false,200);
+            buttonName!=='CANCEL' ? buttonName==='NEWDEAL' ? iV.enableInput(false) : iV.enableInput(false,200) : null;
             vars.audio.playSound(audioClip);
             switch (buttonName) {
                 case 'CANCEL':
