@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 111.008',
+    revision: 'rev 112.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -108,6 +108,7 @@ var vars = {
         '                   - What I learned today. Never, ever trust chrome. Even when youve told it to ignore the cache and the header says ignore the cache, chrome will just sometimes refresh from cache. I assume that would NOT be legal, so I must have some weird plug in intefering with the "USE NO CACHE. BITCH!" statement',
         '                   - This used to be a real problem with PHP pages, so Id force refresh the page a few times until it dumped its cache. Doesnt happen as much in JS but I have noticed this before. Just didnt think it was chrome being a dick :S',
         'Revision 111   - Bug fix: When clicking on hS BG to return quickly to mS, mit wasnt resetting the waitingToPlayLopp array',
+        'Revision 112   - Implemented pause function. Currently only linked to the in game button "new game". Incorrect showNG(false) was being called. Noticed by adding pause function.',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -634,13 +635,13 @@ var vars = {
         showNG: (_show=true)=> {
             let alpha = _show ? 1 : 0;
             let container = scene.containers.NGoptions;
-            _show ? container.setVisible(true) : null;
+            if (_show) { container.setVisible(true); vars.game.pause(); };
             scene.tweens.add({
                 targets: container,
                 alpha: alpha,
                 duration: 250,
                 onComplete: (_t,_o)=> {
-                    !_o[0].alpha ? _o[0].setVisible(false) : null;
+                    if (!_o[0].alpha) { _o[0].setVisible(false); vars.game.pause(false); };
                 }
             });
             return true;
@@ -1442,6 +1443,8 @@ var vars = {
         deal: null,
         deck: null,
         cardSet: null,
+        isPaused: false, // tells the game to stop updating the timer when true
+        pausedAt: null, // holds the time difference between the game start and when the pause
         penaliseErrors: false, // if this is enabled, the user will be penalised by 100 points and a streak reset for bad clicks
         playerStats: null,
         scoreCard: null,
@@ -1573,6 +1576,26 @@ var vars = {
             vars.UI.updateMultiplier(0);
             vars.particles.multiplierHighlightStart(false);
             vars.UI.updateTimer(0);
+        },
+
+        pause: (_pause=true)=> {
+            let gV = vars.game;
+            if (gV.isPaused && _pause) return false; // rq pause but game is already paused!
+            if (!gV.isPaused && !_pause) return false; // rq unpause but game is already unpaused!
+
+            let deal = gV.deal;
+            // we need to get the current timeLapsed and store it, so when we unpause the game we can set the timers new init time
+            if (_pause) {
+                gV.pausedAt = new Date()-deal.startTime;
+                gV.isPaused=true;
+            } else {
+                if (!gV.pausedAt) return 'The pausedAt doesnt exist, unable to create new startTime'
+                deal.startTime = new Date() - gV.pausedAt;
+                gV.pausedAt=null;
+                gV.isPaused=false;
+            };
+
+            return true;
         },
 
         resetUPData: ()=> {
@@ -2624,7 +2647,7 @@ var vars = {
             switch (buttonName) {
                 case 'CANCEL':
                     vars.containers.show('NGoptions',false);
-                    vars.containers.showNGOnFail(false);
+                    vars.containers.showNG(false);
                     return;
                 break;
 
@@ -4381,6 +4404,7 @@ var vars = {
         },
 
         updateTimer: (_newTime)=> {
+            if (vars.game.isPaused) return false; // ignore this update if the game is currently paused
             let timerText = vars.containers.getByName('gamePlayingUI').getByName('timerText');
             timerText.setText(`${_newTime}s - TIME`);
         },
