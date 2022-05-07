@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 109.008',
+    revision: 'rev 111.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -103,6 +103,11 @@ var vars = {
         'Revision 108   - generateUnlockedKeyForUser is now being given out, so it now tests to see if the game is already unlocked before generating a new key. This will stop bugs in the future if user attempts to re-register the game.',
         '                   - This code will eventually be moved to the server. It requires the players unlock list to generate the key',
         'Revision 109   - Added sound effects to buttons on the scroller page (more info)',
+        'Revision 110   - Fixed a weird bug with the N/P buttons on hS.',
+        '                   - You ever say, "OK, so thats whats happening" Then fix it and it over compensates and you think "Thats weird". So, maybe the offset isnt what i believe it to be? Which would mean using this"... and that doesnt fix it... in fact it works the same way as the original code. Then you retrace your steps, try again based on the first fix and it now works... like WTF?',
+        '                   - What I learned today. Never, ever trust chrome. Even when youve told it to ignore the cache and the header says ignore the cache, chrome will just sometimes refresh from cache. I assume that would NOT be legal, so I must have some weird plug in intefering with the "USE NO CACHE. BITCH!" statement',
+        '                   - This used to be a real problem with PHP pages, so Id force refresh the page a few times until it dumped its cache. Doesnt happen as much in JS but I have noticed this before. Just didnt think it was chrome being a dick :S',
+        'Revision 111   - Bug fix: When clicking on hS BG to return quickly to mS, mit wasnt resetting the waitingToPlayLopp array',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -179,7 +184,7 @@ var vars = {
 
             let cV = vars.containers;
             let containerArray = ['CONTAINERS:'];
-            ['current','ignoreLoop','looping','pauseTime','pauseTimeOutMax','pausedByUser','waitingTimeOut'].forEach((_var)=> {
+            ['waitingToPlayLoop','current','ignoreLoop','looping','pauseTime','pauseTimeOutMax','pausedByUser','waitingTimeOut'].forEach((_var)=> {
                 containerArray.push([_var,cV[_var]]);
             });
             containerArray.push('');
@@ -2381,6 +2386,7 @@ var vars = {
                 let cV = vars.containers;
                 cV.show('highScoreTable', false);
                 cV.show('mainScreen', true);
+                cV.waitingToPlayLoop = cV.waitingToPlayLoopDefaults;
 
                 // reset the container vars
                 cV.resetLoopVarsOnContainerQuickSwitch();

@@ -679,11 +679,13 @@ let Unlockables = class {
                 });
 
                 // add the unlock bar/button
-                let cost = ulName.includes('gold') ||ulName.includes('silver') || ulName.includes('bronze') ? consts.unlockPoints.special : consts.unlockPoints.cardSet;
+                let cost = ulName.includes('gold') || ulName.includes('silver') || ulName.includes('bronze') ? consts.unlockPoints.special : consts.unlockPoints.cardSet;
                 let button = this.scene.add.image(startX+1,y+imageHeight,'whitePixel').setData({ delete: true, cost: cost, page: page }).setName(`unlock_cS_${ulName}`).setAlpha(0.7).setVisible(visible).setScale(buttonWidth,90).setOrigin(0,1).setTint(0x0).setInteractive();
                 let unlockIcon = this.scene.add.image(startX+buttonWidth,y+7,'unlockUI','unlockIcon').setData({ delete: true, cost: cost, page: page }).setName(`unlock_cSUI_${ulName}`).setVisible(visible).setOrigin(1,0).setInteractive();
                 let cardSetName = this.getCardSetName(ulName);
                 let buttonText = this.scene.add.text(startX+buttonWidth/2,y+imageHeight-12,`${cardSetName} card set`, { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setData({ delete: true }).setOrigin(0.5,1).setVisible(visible);
+                // if the text is too wide for the card set
+                if (buttonText.width>buttonWidth-20) { let scaleWide = (buttonWidth-20)/buttonText.width; buttonText.setScale(scaleWide,1);  }
                 let costText = this.scene.add.text(startX+buttonWidth/2,y+imageHeight-50,`${cost} UPs`, { fontFamily: fF, fontSize: fS, color: consts.htmlColours.orange }).setData({ delete: true }).setOrigin(0.5,1).setVisible(visible).setStroke(consts.htmlColours.blueDark, 2).setShadow(2, 2, "#333333", 2, true, true);
                 buttonText.setStroke(consts.htmlColours.blueDark, 2);
                 buttonText.setShadow(2, 2, "#333333", 2, true, true);

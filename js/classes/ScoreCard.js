@@ -83,7 +83,7 @@ let ScoreCard = class {
         let hstBG = scene.add.image(cC.cX, cC.cY, 'highScoreTable', 'highScoreTableBG').setDepth(depth);
         // the next two buttons are only available when there are more than 1 page of scores
         let prevButton = scene.add.image(400, cC.cY, 'highScoreTable', 'highScoreTableSideButtons').setOrigin(1,0.5).setFlipX(true).setCrop(0,0,0,0).setName('previousPage_HSTB').setVisible(false).setInteractive();
-        let nextButton = scene.add.image(1220, cC.cY, 'highScoreTable', 'highScoreTableSideButtons').setOrigin(0,0.5).setCrop(0,0,0,0).setName('nextPage_HSTB').setVisible(false).setInteractive();
+        let nextButton = scene.add.image(1370, cC.cY, 'highScoreTable', 'highScoreTableSideButtons').setOrigin(0,0.5).setCrop(0,0,0,0).setName('nextPage_HSTB').setVisible(false).setInteractive();
         
         let scoresButton = scene.add.image(cC.width*0.75, cC.height*0.175, 'highScoreTable', 'bestScoresIcon').setDepth(depth).setName('scores_HSTB').setAlpha(0).setInteractive();
         let timesButton = scene.add.image(cC.width*0.75, cC.height*0.175, 'highScoreTable', 'bestTimesIcon').setDepth(depth).setName('times_HSTB').setAlpha(1).setInteractive();
@@ -519,6 +519,8 @@ let ScoreCard = class {
 
     showHSTableButtons(_show=true) {
         let container = this.highScoreTableContainer;
+        if (_show && container.getByName('previousPage_HSTB').alpha===1) return false;
+
         ['previousPage_HSTB','nextPage_HSTB','close_HSTB'].forEach((_button)=> {
             _show ? container.getByName(_button).setAlpha(1) : container.getByName(_button).setAlpha(0);
         });
