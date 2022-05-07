@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 107.008',
+    revision: 'rev 109.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -100,6 +100,9 @@ var vars = {
         '                   - NOTE: I was gonna show the warning message when unlocking a non OS cS, but I dont load said card set on unlock. Only when they decide to use it... which is fine.',
         'Revision 106   - Fixed a couple of bugs',
         'Revision 107   - Bug fixes. The cards were becoming clickable after showing a hidden card. The game play ui wasnt being shown due to an earlier change hiding it until gameplay is actually needed',
+        'Revision 108   - generateUnlockedKeyForUser is now being given out, so it now tests to see if the game is already unlocked before generating a new key. This will stop bugs in the future if user attempts to re-register the game.',
+        '                   - This code will eventually be moved to the server. It requires the players unlock list to generate the key',
+        'Revision 109   - Added sound effects to buttons on the scroller page (more info)',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -108,8 +111,7 @@ var vars = {
         'Revision 007   - Reduced the render resolution of the particles shader for PCs to 1/3',
         'Revision 008   - Reduced the amount of sparkles on PCs',
 
-        'FUTURE REVISIONS:',
-        'Unlockable tints work. Unlockable cards, not so much.'
+        'FUTURE REVISIONS:'
 
     ],
 
@@ -254,7 +256,6 @@ var vars = {
     },
 
     BUGS: [
-        'When clicking cancel after bring up the '
     ],
 
     TODO: [
@@ -964,6 +965,8 @@ var vars = {
         },
 
         generateUnlockedKeyForUser: ()=> { // generates and saves an unlock key for user
+            let lV = vars.localStorage;
+            if (lV.unlocked) return false;
             let endNum=0; let count=0; let cScount=0; let a=JSON.parse(window.localStorage.TPX_unlockables);
             for (let b in a) {
                 if (a[b].id!=='1010101' && a[b].id!=='0101010') {
@@ -973,7 +976,7 @@ var vars = {
             let unlockID = `${endNum.toString(16).toUpperCase()}-${count.toString(16).toUpperCase()}-${cScount.toString(16).toUpperCase()}-${vars.version.toString().replace('.','')}`;
             
             // save it
-            let lV = vars.localStorage; let lS = window.localStorage; let pre = lV.pre;
+            let lS = window.localStorage; let pre = lV.pre;
             lS[`${pre}_unlockKey`] = unlockID; lV.unlocked=true;
         },
 
@@ -3331,27 +3334,34 @@ var vars = {
             `You will accrue them as you play, whether you win or lose a hand.`,
             `Once you have enough Unlock Points you can either outright buy card sets (500UPs), background tints (100UPs) etc.`,
             `Or if you prefer, you can spin for a random unlock for 250UPs.`,
-            `It's entirely up to you. Unlock your favourite card set for 500UPs then roll every 250UPs and get a random unlock.`,
-            ``,
-            `This game is also available to buy on the Google/Android Marketplace`,
-            `For $1.99 you will get the full game (as you have now), but you will be given infinite unlock points.`,
-            `With those, you can unlock everything, unlock one thing at a time or just keep rolling for a random unlock when you're feeling lucky :)`,
-            `With the full purchase, anytime the game is updated with new unlockables they will automatically be available to you.`,
-            `This version does has adverts. But I will keep these to a minimum (once every 5 games). Watching an advert will automatically increase`,
-            `the amount of unlock points you have by 100 :). Buying the game will remove all adverts.`,
-            ``,
-            `My only request, being a solo developer, is that`,
-            `  - if you do actually like this game`,
-            `  - and do play it often`,
-            `  - and you think the $1.99 is fair price`,
-            `then please buy a copy :)`,
-            `It's more of a thanks than a gatekeeping situation as you can unlock everything without paying a cent.`,
-            `I would be extremely grateful knowing that my game is fun enough for you to part with your hard-earned money.`,
-            ``,
-            `Thanks and enjoy, offer0.`
-
+            `It's entirely up to you. Unlock your favourite card set from 500UPs then roll every 250UPs and get a random unlock.`,
+            ``
             //`TriPeaks can also be played with a wild card. This variation makes it easier to clear all three peaks. It is also possible to make all cards in the peaks face-up, this makes the game more thoughtful and strategic. It is also possible that the waste pile is empty so that one of the exposed cards can be chosen to go to the waste pile for a "head-start".`
             ];
+
+            let extraLines;
+            if (!vars.localStorage.unlocked) {
+                extraLines = [`This game is also available to buy on the Google/Android Marketplace`,
+                `For $1.99 you will get the full game (as you have now), but you will be given infinite unlock points.`,
+                `With those, you can unlock everything, unlock one thing at a time or just keep rolling for a random unlock when you're feeling lucky :)`,
+                `With the full purchase, anytime the game is updated with new unlockables they will automatically be available to you.`,
+                `This version does has adverts. But I will keep these to a minimum (once every 5 games). Watching an advert will automatically increase`,
+                `the amount of unlock points you have by 100 :). Buying the game will remove all adverts.`,
+                ``,
+                `My only request, being a solo developer, is that`,
+                `  - if you do actually like this game`,
+                `  - and do play it often`,
+                `  - and you think the $1.99 is fair price`,
+                `then please buy a copy :)`,
+                `It's more of a thanks than a gatekeeping situation as you can unlock everything without paying a cent.`,
+                `I would be extremely grateful knowing that my game is fun enough for you to part with your hard-earned money.`,
+                ``,
+                `Thanks and enjoy, offer0.`];
+            } else {
+                extraLines = [`Thanks and enjoy, offer0.`];
+            };
+            msg = [...msg,...extraLines];
+
 
             let msgFixes = sV.msgFixes;
 

@@ -165,6 +165,8 @@ let Scroller = class {
 
     click(_name) { // called from vars.input
         _name = _name.replace('SCRL_','');
+        let soundClip = _name==='close' ? 'multiplierReset' : 'buttonClick';
+        vars.audio.playSound(soundClip);
         switch (_name) {
             case 'close':
                 this.fadeIn(false);
