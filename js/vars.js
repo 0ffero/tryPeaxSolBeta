@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 112.008',
+    revision: 'rev 114.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -109,6 +109,7 @@ var vars = {
         '                   - This used to be a real problem with PHP pages, so Id force refresh the page a few times until it dumped its cache. Doesnt happen as much in JS but I have noticed this before. Just didnt think it was chrome being a dick :S',
         'Revision 111   - Bug fix: When clicking on hS BG to return quickly to mS, mit wasnt resetting the waitingToPlayLopp array',
         'Revision 112   - Implemented pause function. Currently only linked to the in game button "new game". Incorrect showNG(false) was being called. Noticed by adding pause function.',
+        'Revision 113, 114  - Added 5 new cursors. Instead of using the AIs pointer for the player it now uses the new smaller cursors. They feel much better. Red, Yellow, Green, Blue and Grey',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -437,6 +438,10 @@ var vars = {
                 scene.load.image('whitePixel', `${folder}/whitePixel.png`);
                 scene.load.image('mainScreenMask', `${folder}/mainScreen/welcomeText.png`);
 
+                // cursors
+                let cU = 'cursors';
+                scene.load.atlas('cursors', `${folder}/${cU}/${cU}.png`, `${folder}/${cU}/${cU}.json`);
+
 
                 // card sets
                 let cardSet = vars.game.cardSet;
@@ -455,7 +460,7 @@ var vars = {
 
                 // logo
                 let lS = 'logoScreen';
-                scene.load.atlas(lS, `${folder}/${lS}/logoScreen.png`, `${folder}/${lS}/logoScreen.json`);
+                scene.load.atlas(lS, `${folder}/${lS}/${lS}.png`, `${folder}/${lS}/${lS}.json`);
 
                 // options
                 scene.load.image('optionsBG', `${folder}/optionsBG.png`);
@@ -1438,6 +1443,25 @@ var vars = {
         }
     },
 
+    cursors: {
+        available: ['green','blue','red','yellow','grey'],
+        current: 'blue',
+
+        init: ()=> {
+            // does he-haw at the mooment
+        },
+
+        changeCursor: (_colour='blue')=> {
+            if (vars.checkType(_colour,'string')) return false;
+
+            let cV = vars.cursors;
+            if (!cV.available.includes(_color)) return false;
+
+            // cursor colour is valid
+            vars.input.cursor.phaserObject.setFrame(`${_colour}Default`);
+        }
+    },
+
     game: {
         phaserGameObject: null,
         deal: null,
@@ -2247,7 +2271,7 @@ var vars = {
             // hide the default cursor and replace it with the ai finger cursor
             let cC = consts.canvas;
             let xyOffsets = { x: 620, y: 880 }; // cards Dealt isnt created until the game starts, so we just set with constants
-            vars.input.cursor.phaserObject = scene.add.image(cC.cX,cC.height*0.85, 'ui','aiFingerMoving').setScale(0.8).setName('playerCursor').setData({ over: null, cardsLeftXY: xyOffsets }).setDepth(consts.depths.debug+1).setVisible(false); // this cursor sits above everything
+            vars.input.cursor.phaserObject = scene.add.image(cC.cX,cC.height*0.85, 'cursors','blueDefault').setName('playerCursor').setData({ over: null, cardsLeftXY: xyOffsets }).setDepth(consts.depths.debug+1).setVisible(false); // this cursor sits above everything
             
             // initialise the vars used to fade out the cursor after x seconds being stationary
             let seconds = 5;
