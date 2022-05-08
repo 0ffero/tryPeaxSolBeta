@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 114.008',
+    revision: 'rev 120.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -110,6 +110,11 @@ var vars = {
         'Revision 111   - Bug fix: When clicking on hS BG to return quickly to mS, mit wasnt resetting the waitingToPlayLopp array',
         'Revision 112   - Implemented pause function. Currently only linked to the in game button "new game". Incorrect showNG(false) was being called. Noticed by adding pause function.',
         'Revision 113, 114  - Added 5 new cursors. Instead of using the AIs pointer for the player it now uses the new smaller cursors. They feel much better. Red, Yellow, Green, Blue and Grey',
+        'Revision 115   - Fixed the php file that gets the file sizes of files used in the loader class',
+        'Revision 116 - 118 - Added grey scale shder to cards when the player loses a deal.',
+        'Revision 119   - Fixed a bug where input wasnt being enabled after a loss and returning to main screen + better logging for enable/disable input function',
+        'Revision 120   - enableInput now does a check before blindly setting enable/disable.',
+        '                   - MUST BE CHECKED IN EVERY CLICK CASE. So may have to be tuned at a later point.',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -1278,6 +1283,33 @@ var vars = {
                     })
                 }
             })
+        },
+
+        cardsToGrey: (_toGrey=true)=> { // tweens cards from colour to grey (or grey to colour)
+            let p = vars.shaders.getGrayScalePipeLine();
+            let groups = scene.groups;
+
+            let fromTo = _toGrey ? [0, 1] : [1, 0];
+
+            let intensity = vars.isPhone? fromTo[1] : fromTo[0]; // if on phone, intensity is set directly (and is not tweened)
+            let cGroups = ['cardsDealt','cardsLeft','cardCurrent'];
+            cGroups.forEach((_cS)=> { p.remove(groups[_cS]); p.add(groups[_cS], { intensity: intensity }); }); // remove any remaining gS pipeline then initialise the intensity for each group
+
+
+            if ((!intensity || !_toGrey) && !vars.isPhone) { // tween the groups intensity
+                let g1 = groups[cGroups[0]];
+                let g2 = groups[cGroups[1]];
+                let g3 = groups[cGroups[2]];
+                scene.tweens.addCounter({
+                    from: fromTo[0], to: fromTo[1],
+                    duration: 1000,
+                    onUpdate: (_t,_v)=> { 
+                        p.get(g1)[0].setIntensity(_v.value);
+                        p.get(g2)[0].setIntensity(_v.value);
+                        p.get(g3)[0].setIntensity(_v.value);
+                    }
+                });
+            };
         },
 
         gimme2KGreyToColour: ()=> {
@@ -2591,6 +2623,7 @@ var vars = {
         },
 
         enableInput: (_enable=true,_timeout=null)=> {
+            if (_enable===vars.input.enabled) return false;
             vars.input.enabled = _enable; // set the enabled var
             vars.DEBUG ? console.log(`%c[INPUT] Input has been ${_enable ? 'enabled': 'disabled'} ${_timeout ? `and will be re-enabled in ${_timeout}` : ''}`,`color: ${_enable ? '#10FF10': '#ff8000'}`) : null;
             
@@ -2599,7 +2632,7 @@ var vars = {
             scene.tweens.addCounter({ // if this was called to simply stop accidental double clicks then set a timeout to re-enable input
                 from: 0, to: 1,
                 duration: _timeout,
-                onComplete: ()=> { vars.input.enabled = !vars.input.enabled; vars.DEBUG ? console.log(`Input has been ${vars.input.enabled ? 'enabled': 'disabled'}`) : null; } // re-enable input
+                onComplete: ()=> { vars.input.enabled = !vars.input.enabled; vars.DEBUG ? console.log(`%c  > Input has been ${vars.input.enabled ? 'enabled': 'disabled'}`,`color: ${vars.input.enabled ? '#10FF10': '#ff8000'}`) : null; } // re-enable input
             })
         },
 
@@ -2666,8 +2699,8 @@ var vars = {
             let iV = vars.input;
             let buttonName = _gameObject.name.replace('NG_','').replace('_Button_ui','');
             let audioClip = buttonName==='CANCEL' || buttonName==='EXIT' ? 'multiplierReset' : 'buttonClick';
-            buttonName!=='CANCEL' ? buttonName==='NEWDEAL' ? iV.enableInput(false) : iV.enableInput(false,200) : null;
             vars.audio.playSound(audioClip);
+
             switch (buttonName) {
                 case 'CANCEL':
                     vars.containers.show('NGoptions',false);
@@ -2677,6 +2710,7 @@ var vars = {
 
                 case 'NEWDEAL':
                     // new deal clicked
+                    iV.enableInput(false);
                     vars.containers.showNG(false);
                     vars.containers.showNGOnFail(false);
                     // start a new game
@@ -2685,6 +2719,7 @@ var vars = {
                 break;
 
                 case 'HIGHSCORES':
+                    iV.enableInput(false,200);
                     vars.game.scoreCard.showHighScoreTable(true);
                     vars.containers.showNGOnFail(false);
                     return true;
@@ -4111,7 +4146,8 @@ var vars = {
 
                 if (gV.deal.win) { // player won the game, do windance
                     new winDance();
-                } else { // player lost the game, show
+                } else { // player lost the game, show options and remove grey shader from groups
+                    gV.deal.removeGreyShaderFromCardGroups();
                     vars.containers.showNGOnFail(true);
                 };
                 return true;

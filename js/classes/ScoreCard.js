@@ -553,7 +553,7 @@ let ScoreCard = class {
     }
 
     showPage() { // hide the old page and shows the new one
-        vars.DEBUG ? console.log(`%cHiding page ${this.oldPage} and showing page ${this.currentPage}`, 'color: black; background-color: yellow;') : null;
+        vars.DEBUG ? console.log(`  %cHiding page ${this.oldPage} and showing page ${this.currentPage}`, 'color: black; background-color: yellow;') : null;
         let iV = vars.input;
         let pageButtons = iV.pageButtons;
         pageButtons.highScoreTable = pageButtons.highScoreTable.slice(0,1);

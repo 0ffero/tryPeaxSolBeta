@@ -472,6 +472,7 @@ let Deal = class {
             this.gameWin();
         } else {
             vars.game.playerStats.gamesLost++;
+            vars.anims.cardsToGrey(); // grey the cards out
             this.gameLose();
         };
 
@@ -516,6 +517,13 @@ let Deal = class {
             duration: 250,
             onStart: ()=> { _win ? vars.game.deck.increaseScore(this.currentCardPosition[0],this.currentCardPosition[0]) : null; vars.game.deck.resetStreak(); }
         });
+    }
+
+    removeGreyShaderFromCardGroups() {
+        let p = vars.shaders.getGrayScalePipeLine();
+        let groups = scene.groups;
+        let cGroups = ['cardsDealt','cardsLeft','cardCurrent'];
+        cGroups.forEach((_cS)=> { p.remove(groups[_cS]) });
     }
 
     saveSolution(_win=false) {
