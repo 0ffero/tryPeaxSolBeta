@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 120.008',
+    revision: 'rev 121.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -115,6 +115,7 @@ var vars = {
         'Revision 119   - Fixed a bug where input wasnt being enabled after a loss and returning to main screen + better logging for enable/disable input function',
         'Revision 120   - enableInput now does a check before blindly setting enable/disable.',
         '                   - MUST BE CHECKED IN EVERY CLICK CASE. So may have to be tuned at a later point.',
+        'Revision 121   - Cursor colour can now be changed using the scroll wheel! Exciting stuff, eh? Can you tell Im running out of stuff to fix?',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -1476,22 +1477,40 @@ var vars = {
     },
 
     cursors: {
-        available: ['green','blue','red','yellow','grey'],
+        available: ['green','red','yellow','blue'],
+        others: 'grey',
         current: 'blue',
 
         init: ()=> {
             // does he-haw at the mooment
         },
 
-        changeCursor: (_colour='blue')=> {
-            if (vars.checkType(_colour,'string')) return false;
+        changeCursor: (_colour='blue')=> { // called from  v.i.changeCursorColour
+            if (!vars.checkType(_colour,'string')) return false;
 
             let cV = vars.cursors;
-            if (!cV.available.includes(_color)) return false;
+            if (!cV.available.includes(_colour)) return false;
 
             // cursor colour is valid
             vars.input.cursor.phaserObject.setFrame(`${_colour}Default`);
+            cV.current = _colour;
+        },
+
+        changeCursorColour: ()=> { // the actual function to change cursor colour is in v.i
+            vars.input.changeCursorColour();
+            return true;
+        },
+
+        setToGrey: (_grey=true)=> {
+            let colour = 'grey';
+            if (!_grey) {
+                // get the last colour of the object
+                let cA = vars.cursors.available;
+                colour = cA[cA.length-1];
+            };
+            vars.input.cursor.phaserObject.setFrame(`${colour}Default`);
         }
+
     },
 
     game: {
@@ -1819,6 +1838,29 @@ var vars = {
             previousObjectOver: null, // when player presses DOWN key to go to "cards left" then UP, cursor should be over the lasy highlighted card
             tween: null, // this holds fade out tweens, so when we move the mouse again it can remove it easily then set alpha of cursor back to 1
         
+            changeCursorColour: (_next=true)=> {
+                let cV = vars.cursors;
+                // get next colour
+                let newColour;
+                if (_next) {
+                    newColour = cV.available.shift(); // grab the first available
+                    cV.available.push(newColour); // push it back into last place
+                    if (newColour===cV.current) {
+                        newColour = cV.available.shift(); // grab the first available
+                        cV.available.push(newColour); // push it back into last place
+                    };
+                } else {
+                    newColour = cV.available.pop(); // get last colour in array
+                    cV.available.splice(0,0,newColour); // push it into position 0
+                    if (newColour===cV.current) {
+                        newColour = cV.available.pop(); // get last colour in array
+                        cV.available.splice(0,0,newColour); // push it into position 0
+                    };
+                };
+                cV.changeCursor(newColour); // swap to the new frame
+                return true;
+            },
+            
             clickOnCardsLeft: ()=> {
                 let cardsLeft = scene.groups.cardsLeft.list
                 // look at the last card (this should be the interactive card)
@@ -2392,6 +2434,14 @@ var vars = {
                     vars.DEBUG ? console.log(gameObject.name,gameObject.data && gameObject.data.list? gameObject.data.list : 'No Data',gameObject) : null;
                     return true;
                 } 
+            });
+
+            // SCROLL WHEEL (USED TO CHANGE THE USERS CURSOR)
+            scene.input.on('wheel', (_p,_object,_dX,_dY,_dZ)=> {
+                let iV = vars.input;
+                if (!iV.enabled) return false;
+                _dY<0 ? iV.cursor.changeCursorColour(true) : iV.cursor.changeCursorColour(false);
+                return true;
             });
 
             scene.input.on('gameobjectover', function (pointer, gameObject) {
