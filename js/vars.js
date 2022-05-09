@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 121.008',
+    revision: 'rev 122.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -116,6 +116,7 @@ var vars = {
         'Revision 120   - enableInput now does a check before blindly setting enable/disable.',
         '                   - MUST BE CHECKED IN EVERY CLICK CASE. So may have to be tuned at a later point.',
         'Revision 121   - Cursor colour can now be changed using the scroll wheel! Exciting stuff, eh? Can you tell Im running out of stuff to fix?',
+        'Revision 122   - Big fix. Pause function was causing int out of range when pausing before the first card had been clicked.',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -1661,6 +1662,7 @@ var vars = {
             let deal = gV.deal;
             // we need to get the current timeLapsed and store it, so when we unpause the game we can set the timers new init time
             if (_pause) {
+                if (!deal.startTime) return false;
                 gV.pausedAt = new Date()-deal.startTime;
                 gV.isPaused=true;
             } else {
