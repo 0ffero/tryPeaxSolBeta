@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 122.008',
+    revision: 'rev 123.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -107,7 +107,7 @@ var vars = {
         '                   - You ever say, "OK, so thats whats happening" Then fix it and it over compensates and you think "Thats weird". So, maybe the offset isnt what i believe it to be? Which would mean using this"... and that doesnt fix it... in fact it works the same way as the original code. Then you retrace your steps, try again based on the first fix and it now works... like WTF?',
         '                   - What I learned today. Never, ever trust chrome. Even when youve told it to ignore the cache and the header says ignore the cache, chrome will just sometimes refresh from cache. I assume that would NOT be legal, so I must have some weird plug in intefering with the "USE NO CACHE. BITCH!" statement',
         '                   - This used to be a real problem with PHP pages, so Id force refresh the page a few times until it dumped its cache. Doesnt happen as much in JS but I have noticed this before. Just didnt think it was chrome being a dick :S',
-        'Revision 111   - Bug fix: When clicking on hS BG to return quickly to mS, mit wasnt resetting the waitingToPlayLopp array',
+        'Revision 111   - Bug fix: When clicking on hS BG to return quickly to mS, it wasnt resetting the waitingToPlayLoop array',
         'Revision 112   - Implemented pause function. Currently only linked to the in game button "new game". Incorrect showNG(false) was being called. Noticed by adding pause function.',
         'Revision 113, 114  - Added 5 new cursors. Instead of using the AIs pointer for the player it now uses the new smaller cursors. They feel much better. Red, Yellow, Green, Blue and Grey',
         'Revision 115   - Fixed the php file that gets the file sizes of files used in the loader class',
@@ -117,6 +117,7 @@ var vars = {
         '                   - MUST BE CHECKED IN EVERY CLICK CASE. So may have to be tuned at a later point.',
         'Revision 121   - Cursor colour can now be changed using the scroll wheel! Exciting stuff, eh? Can you tell Im running out of stuff to fix?',
         'Revision 122   - Big fix. Pause function was causing int out of range when pausing before the first card had been clicked.',
+        'Revision 123   - When the AI was finished replaying the requested game it wasnt destroying the deck/deal. Now it does. Added an extra piece of code to reset score and time after general deal restarts.',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -1246,6 +1247,8 @@ var vars = {
         destroy: ()=> { // AI's come here to die. Its quick and easy, so theres that...
             // Plus. The AI did actually request this.
             vars.AI.current=null;
+            // destroy deal/deck
+            vars.UI.destroyAllCards();
             // re-enable input (only possible after nullifying AI.current)
             vars.input.enableInput(true);
         }
@@ -4165,6 +4168,10 @@ var vars = {
             });
             vars.game.deal = null;
             vars.game.deck = null;
+            //reset the time and scores on gamePlayUI
+            let gUI = scene.groups.gamePlayingUI;
+            gUI.getByName('scoreText').setText('0 - SCORE');
+            gUI.getByName('timerText').setText('0.0s - TIME');
         },
 
         displayUnlock(_t,_v,_pV) {
