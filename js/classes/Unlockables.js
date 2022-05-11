@@ -209,7 +209,6 @@ let Unlockables = class {
         let centre = optionsHeaderRight.getCenter();
         this.randomRollText = this.scene.add.image(centre.x,centre.y,'unlockUI','randomRollText').setName('randomRoll').setInteractive();
         this.animateRandomRollButton();
-        this.showRandomRollButton();
         this.randomRollText.on('pointerup', this.click, this.randomRollText);
         this.currentTypeText = scene.add.bitmapText(60, -70, 'defaultFont', 'CARDSETS',64).setName('options_currentType').setOrigin(0,0.5).setTint(consts.tints.orange);
         container.add([optionsHeaderLeft,optionsHeaderRight,this.randomRollText,this.currentTypeText]);
@@ -233,6 +232,7 @@ let Unlockables = class {
         for (let _ul in uS) {
             if (!uS[_ul].unlocked) { this.unlockKeys.push(_ul); };
         };
+        this.showRandomRollButton();
 
         // BUILD THE PAGES
         this.buildPages();
@@ -837,13 +837,17 @@ let Unlockables = class {
     }
 
     showRandomRollButton() { // SHOW RANDOM ROLL BUTTON IF PLAYER HAS ENOUGH UPs (and vice versa)
-        if (vars.game.unlockPoints<consts.unlockPoints.randomRoll) {
+        let unlockablesRemaining = vars.game.unlockables.unlockKeys.length;
+        let rrCost = consts.unlockPoints.randomRoll;
+        if (vars.game.unlockPoints<rrCost || unlockablesRemaining<16) { // player doesnt have enough UPs or unlocks remaining is less than 16 (the LBE needs at least 12 unlocks left - 10 on screen at any one time, the unlock that just exited the screen and the one entering)
             this.randomRollText.setFrame('randomRollUnavailableText').disableInteractive();
             this.tweens.randomRollButton.pause();
             this.randomRollText.setScale(1);
+            return false;
         } else {
             this.randomRollText.setFrame('randomRollText').setInteractive();
             this.tweens.randomRollButton.resume();
+            return true;
         };
     }
 

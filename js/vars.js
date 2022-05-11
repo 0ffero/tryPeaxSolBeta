@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 125.008',
+    revision: 'rev 126.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -121,6 +121,7 @@ var vars = {
         'Revision 124   - Fixed a weird bug coming from the interaction between looping to hS, clicking sortBy, then closing hS.Fixes "clunky" which was written down a few days ago.',
         '                   - Ive also noticed a lot of duplication in the functions (especially when dealing with gameplay ui, mainScreen, highScoreTables. After 1.0 this will probably need re-factoring',
         'Revision 125   - Enter works again on high score page. Enter is now also used for navigating pages etc, so I had to ignore the enter press when playerIsEnteringName',
+        'Revision 126   - Random Roll button is now disabled when less than 16 unlocks remain; due to how the LBE works',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
