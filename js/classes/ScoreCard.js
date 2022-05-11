@@ -428,6 +428,7 @@ let ScoreCard = class {
             }
         };
     
+        // The key code is one we're interested in (A-Z, Delete or Enter)
         if ((_key.keyCode>=65 && _key.keyCode<=90) || (_key.keyCode===189 || _key.keyCode===190)) {
             let letter = _key.key.toUpperCase();
             vars.DEBUG ? console.log(`%cUser is entering the letter ${letter}`,'color: #10FF10') : null;

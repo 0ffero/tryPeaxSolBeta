@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 123.008',
+    revision: 'rev 125.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -118,6 +118,9 @@ var vars = {
         'Revision 121   - Cursor colour can now be changed using the scroll wheel! Exciting stuff, eh? Can you tell Im running out of stuff to fix?',
         'Revision 122   - Big fix. Pause function was causing int out of range when pausing before the first card had been clicked.',
         'Revision 123   - When the AI was finished replaying the requested game it wasnt destroying the deck/deal. Now it does. Added an extra piece of code to reset score and time after general deal restarts.',
+        'Revision 124   - Fixed a weird bug coming from the interaction between looping to hS, clicking sortBy, then closing hS.Fixes "clunky" which was written down a few days ago.',
+        '                   - Ive also noticed a lot of duplication in the functions (especially when dealing with gameplay ui, mainScreen, highScoreTables. After 1.0 this will probably need re-factoring',
+        'Revision 125   - Enter works again on high score page. Enter is now also used for navigating pages etc, so I had to ignore the enter press when playerIsEnteringName',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -126,8 +129,9 @@ var vars = {
         'Revision 007   - Reduced the render resolution of the particles shader for PCs to 1/3',
         'Revision 008   - Reduced the amount of sparkles on PCs',
 
-        'FUTURE REVISIONS:'
-
+        'FUTURE REVISIONS:',
+        '   SOMETIMES THE CURSOR WILL BE FADING OUT AND IT WONT FADE IN PROPERLY (on cursor move or keypress?). ONLY SEEN IT A COUPLE OF TIMES, SO MORE TESTING IS NEEDED',
+        '   POST 1.0    - See revision 124 notes.'
     ],
 
     DEBUG: true,
@@ -2385,7 +2389,7 @@ var vars = {
                         return true;
                     };
 
-                    // ARROW KEYS and SPACE/ENTER
+                    // ARROW KEYS and SPACE/ENTER/ESCAPE
                     // first: the only keys we are interested in beyond this point is arrows, space/enter & esc
                     let allowed = [' ','Enter','Escape'];
                     if (!_key.key.includes('Arrow') && !allowed.includes(_key.key)) return false;
@@ -2398,6 +2402,10 @@ var vars = {
                         _key.stopPropagation();
                         return true;
                     };
+
+
+                    // ENTER KEY while player is ENTERING NAME is dealt with in scoreCard
+                    if (key==='Enter' && vars.game.scoreCard.inputContainer.visible) { return true };
 
                     
                     // first time one of the cursor keys have been pressed? set usingCursorKeys
@@ -2727,12 +2735,12 @@ var vars = {
                         onComplete: ()=> {
                             let cV = vars.containers;
                             // we can here from:   looping                    game play screen
-                            if (cV.looping) { cV.ignoreLoop=false; } else { cV.showNGOnFail(true); };
+                            if (cV.looping) { cV.ignoreLoop=false; cV.waitingToPlayLoop = cV.waitingToPlayLoopDefaults; cV.waitingTimeOut = cV.waitingTimeOutMax; } else { cV.showNGOnFail(true); };
                             scoreCard.showHSTableButtons(false);
                             scoreCard.showHSTableReplayButtons(false);
                             cV.show('highScoreTable', false);
                             // if we paused to get here we need to 
-                            if (cV.pausedByUser) { cV.show('mainScreen', true);  cV.pausedByUser=false};
+                            if (cV.pausedByUser || cV.looping) { cV.show('mainScreen', true);  cV.pausedByUser=false};
                         }
                     });
                     return true;
