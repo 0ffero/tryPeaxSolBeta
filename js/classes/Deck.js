@@ -47,7 +47,7 @@ let Deck = class {
             vars.UI.newMessage(points, _x, _y-120, 0, 2000, 24, 0xff00);
         } else {
             points=_bonus;
-        }
+        };
 
         // update the players score var
         this.playerScore += points;
@@ -99,6 +99,15 @@ let Deck = class {
             // pop the card, set depth and reposition
             vars.game.deal.showNextRemainingCard(_cL,true);
         });
+
+        // show a pop up if the player is using an non OS card set
+        if (!vars.game.cardSet.includes('OS')) {
+            let bonus = this.playerScore*0.1;
+            this.playerScore+=bonus;
+            vars.UI.updateScore(this.playerScore);
+            vars.UI.newMessage(`${bonus} bonus points\nfor difficulty`,consts.canvas.cX,consts.canvas.cY,0, 3000, 64, consts.tints.orange);
+
+        }
 
         let duration = 250;
         let totalDuration = duration * cardCount;

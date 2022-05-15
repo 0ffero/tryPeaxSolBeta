@@ -1,7 +1,7 @@
 "use strict";
 var vars = {
     version: 0.99,
-    revision: 'rev 126.008',
+    revision: 'rev 127.008',
     // rev [aaa].[bbb] where [bbb] is the sub revision with regards to speeding up the game on phones
     revisionInfo: [
         'Beta State: Unlocks are now fully set up. Still to implement switching card sets. Tints work though :)',
@@ -122,6 +122,7 @@ var vars = {
         '                   - Ive also noticed a lot of duplication in the functions (especially when dealing with gameplay ui, mainScreen, highScoreTables. After 1.0 this will probably need re-factoring',
         'Revision 125   - Enter works again on high score page. Enter is now also used for navigating pages etc, so I had to ignore the enter press when playerIsEnteringName',
         'Revision 126   - Random Roll button is now disabled when less than 16 unlocks remain; due to how the LBE works',
+        'Revision 127   - Added bonus points for using non OS card sets. Updated the UP count as the scores can now be divisible by 10, not 100',
 
 
         'SPEED UP REVISIONS (mainly for phones)',
@@ -1616,7 +1617,7 @@ var vars = {
             let playerTime = _time; // passed in
 
             // bonus points for score
-            let scorePoints = playerScore/div; // 114
+            let scorePoints = ~~(playerScore/div); // 114
             uPD.scorePoints = scorePoints; // store it
             uPD.scoreCoins = gV.getCoins(scorePoints);
             vars.DEBUG ? console.table({ scorePoints: scorePoints }) : null;
@@ -4321,7 +4322,7 @@ var vars = {
 
             let font = !_fontSize || _fontSize<=32 ? 'defaultFontSmall' : 'defaultFont';
 
-            let popup = scene.add.bitmapText(_x, _y, font, _msg, _fontSize).setOrigin(0.5).setLetterSpacing(10).setDropShadow(8,8).setTint(_tint).setDepth(255);
+            let popup = scene.add.bitmapText(_x, _y, font, _msg, _fontSize,1).setOrigin(0.5).setLetterSpacing(10).setDropShadow(8,8).setTint(_tint).setDepth(255);
             scene.tweens.add({
                 targets: popup,
                 y: 0,
